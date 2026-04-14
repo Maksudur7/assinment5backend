@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../../middleware/auth");
+const async_handler_1 = require("../../utils/async-handler");
+const users_controller_1 = require("./users.controller");
+const usersRouter = (0, express_1.Router)();
+usersRouter.get("/me", auth_1.authenticate, (0, async_handler_1.asyncHandler)(users_controller_1.getMeController));
+usersRouter.put("/me", auth_1.authenticate, (0, async_handler_1.asyncHandler)(users_controller_1.updateMeController));
+usersRouter.get("/me/watch-history", auth_1.authenticate, (0, async_handler_1.asyncHandler)(users_controller_1.watchHistoryController));
+usersRouter.put("/me/watch-progress/:mediaId", auth_1.authenticate, (0, async_handler_1.asyncHandler)(users_controller_1.updateProgressController));
+exports.default = usersRouter;

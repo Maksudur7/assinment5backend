@@ -1,0 +1,16 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../../middleware/auth");
+const async_handler_1 = require("../../utils/async-handler");
+const media_controller_1 = require("./media.controller");
+const mediaRouter = (0, express_1.Router)();
+mediaRouter.get("/", (0, async_handler_1.asyncHandler)(media_controller_1.listMediaController));
+mediaRouter.get("/trending", (0, async_handler_1.asyncHandler)(media_controller_1.trendingController));
+mediaRouter.get("/featured", (0, async_handler_1.asyncHandler)(media_controller_1.featuredController));
+mediaRouter.get("/new-releases", (0, async_handler_1.asyncHandler)(media_controller_1.newReleasesController));
+mediaRouter.get("/recommendations", auth_1.authenticate, (0, async_handler_1.asyncHandler)(media_controller_1.recommendationsController));
+mediaRouter.get("/:id", (0, async_handler_1.asyncHandler)(media_controller_1.getMediaController));
+mediaRouter.put("/:id", auth_1.authenticate, auth_1.requireAdmin, (0, async_handler_1.asyncHandler)(media_controller_1.updateMediaController));
+mediaRouter.delete("/:id", auth_1.authenticate, auth_1.requireAdmin, (0, async_handler_1.asyncHandler)(media_controller_1.deleteMediaController));
+exports.default = mediaRouter;

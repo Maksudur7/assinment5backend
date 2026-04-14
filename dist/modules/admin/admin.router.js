@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../../middleware/auth");
+const async_handler_1 = require("../../utils/async-handler");
+const admin_controller_1 = require("./admin.controller");
+const adminRouter = (0, express_1.Router)();
+adminRouter.use(auth_1.authenticate, auth_1.requireAdmin);
+adminRouter.get("/overview", (0, async_handler_1.asyncHandler)(admin_controller_1.adminOverviewController));
+adminRouter.get("/reviews/pending", (0, async_handler_1.asyncHandler)(admin_controller_1.pendingReviewsController));
+adminRouter.post("/reviews/:reviewId/approve", (0, async_handler_1.asyncHandler)(admin_controller_1.approveReviewController));
+adminRouter.post("/reviews/:reviewId/reject", (0, async_handler_1.asyncHandler)(admin_controller_1.rejectReviewController));
+adminRouter.post("/media", (0, async_handler_1.asyncHandler)(admin_controller_1.createMediaController));
+exports.default = adminRouter;

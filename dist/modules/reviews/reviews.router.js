@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../../middleware/auth");
+const async_handler_1 = require("../../utils/async-handler");
+const reviews_controller_1 = require("./reviews.controller");
+const reviewsRouter = (0, express_1.Router)();
+reviewsRouter.get("/media/:mediaId/reviews", (0, async_handler_1.asyncHandler)(reviews_controller_1.listReviewsController));
+reviewsRouter.post("/media/:mediaId/reviews", auth_1.authenticate, (0, async_handler_1.asyncHandler)(reviews_controller_1.createReviewController));
+reviewsRouter.put("/reviews/:reviewId", auth_1.authenticate, (0, async_handler_1.asyncHandler)(reviews_controller_1.updateReviewController));
+reviewsRouter.delete("/reviews/:reviewId", auth_1.authenticate, (0, async_handler_1.asyncHandler)(reviews_controller_1.deleteReviewController));
+reviewsRouter.post("/reviews/:reviewId/like", auth_1.authenticate, (0, async_handler_1.asyncHandler)(reviews_controller_1.likeReviewController));
+reviewsRouter.post("/reviews/:reviewId/comments", auth_1.authenticate, (0, async_handler_1.asyncHandler)(reviews_controller_1.addCommentController));
+reviewsRouter.get("/reviews/:reviewId/comments", (0, async_handler_1.asyncHandler)(reviews_controller_1.listCommentsController));
+exports.default = reviewsRouter;

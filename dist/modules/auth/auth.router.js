@@ -1,0 +1,18 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const async_handler_1 = require("../../utils/async-handler");
+const auth_1 = require("../../middleware/auth");
+const auth_controller_1 = require("./auth.controller");
+const authRouter = (0, express_1.Router)();
+authRouter.post("/email/signup", (0, async_handler_1.asyncHandler)(auth_controller_1.emailSignupController));
+authRouter.post("/email/signin", (0, async_handler_1.asyncHandler)(auth_controller_1.emailSigninController));
+authRouter.post("/social/signin", (0, async_handler_1.asyncHandler)(auth_controller_1.socialSigninController));
+authRouter.post("/forgot-password", (0, async_handler_1.asyncHandler)(auth_controller_1.forgotPasswordController));
+authRouter.post("/reset-password", (0, async_handler_1.asyncHandler)(auth_controller_1.resetPasswordController));
+authRouter.get("/session", auth_1.authenticate, (0, async_handler_1.asyncHandler)(auth_controller_1.sessionController));
+authRouter.get("/sessions", auth_1.authenticate, (0, async_handler_1.asyncHandler)(auth_controller_1.sessionsController));
+authRouter.post("/sessions/revoke", auth_1.authenticate, (0, async_handler_1.asyncHandler)(auth_controller_1.revokeSessionController));
+authRouter.post("/refresh-token", auth_1.authenticate, (0, async_handler_1.asyncHandler)(auth_controller_1.refreshTokenController));
+authRouter.post("/signout", (0, async_handler_1.asyncHandler)(auth_controller_1.signoutController));
+exports.default = authRouter;

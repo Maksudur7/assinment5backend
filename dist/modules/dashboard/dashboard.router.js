@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../../middleware/auth");
+const async_handler_1 = require("../../utils/async-handler");
+const dashboard_controller_1 = require("./dashboard.controller");
+const dashboardRouter = (0, express_1.Router)();
+dashboardRouter.get("/stats", auth_1.authenticate, (0, async_handler_1.asyncHandler)(dashboard_controller_1.getStatsController));
+dashboardRouter.get("/favorites", auth_1.authenticate, (0, async_handler_1.asyncHandler)(dashboard_controller_1.getFavoritesController));
+exports.default = dashboardRouter;

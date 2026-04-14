@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../../middleware/auth");
+const async_handler_1 = require("../../utils/async-handler");
+const purcheses_controller_1 = require("./purcheses.controller");
+const purchasesRouter = (0, express_1.Router)();
+purchasesRouter.get("/history", auth_1.authenticate, (0, async_handler_1.asyncHandler)(purcheses_controller_1.purchaseHistoryController));
+purchasesRouter.get("/", auth_1.authenticate, auth_1.requireAdmin, (0, async_handler_1.asyncHandler)(purcheses_controller_1.allPurchasesController));
+purchasesRouter.post("/", auth_1.authenticate, (0, async_handler_1.asyncHandler)(purcheses_controller_1.createPurchaseController));
+purchasesRouter.post("/:purchaseId/revoke", auth_1.authenticate, (0, async_handler_1.asyncHandler)(purcheses_controller_1.revokePurchaseController));
+exports.default = purchasesRouter;
