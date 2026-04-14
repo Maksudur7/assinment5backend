@@ -12,10 +12,16 @@
           "node_modules/@better-auth/**",
           "node_modules/@better-fetch/**",
           "node_modules/@noble/**",
+          "node_modules/@standard-schema/**",
+          "node_modules/@opentelemetry/**",
           "node_modules/better-call/**",
+          "node_modules/rou3/**",
+          "node_modules/set-cookie-parser/**",
+          "node_modules/defu/**",
           "node_modules/jose/**",
           "node_modules/kysely/**",
           "node_modules/nanostores/**",
+          "node_modules/zod/**",
           "prisma/schema.prisma"
         ]
       }
