@@ -25,7 +25,7 @@ async function getAuth() {
                 emailAndPassword: {
                     enabled: true,
                 },
-                trustedOrigins: Array.from(new Set([env_1.env.appUrl, env_1.env.frontendAppUrl, env_1.env.betterAuthUrl])),
+                trustedOrigins: Array.from(new Set([env_1.env.appUrl, env_1.env.betterAuthUrl, ...env_1.env.frontendAppUrls])),
             });
         })();
     }

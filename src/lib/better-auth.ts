@@ -23,7 +23,7 @@ export async function getAuth() {
         emailAndPassword: {
           enabled: true,
         },
-        trustedOrigins: Array.from(new Set([env.appUrl, env.frontendAppUrl, env.betterAuthUrl])),
+        trustedOrigins: Array.from(new Set([env.appUrl, env.betterAuthUrl, ...env.frontendAppUrls])),
       });
     })();
   }
