@@ -8,6 +8,13 @@
         "includeFiles": [
           "node_modules/.prisma/client/**",
           "node_modules/@prisma/client/**",
+          "node_modules/better-auth/**",
+          "node_modules/@better-auth/**",
+          "node_modules/@better-fetch/**",
+          "node_modules/better-call/**",
+          "node_modules/jose/**",
+          "node_modules/kysely/**",
+          "node_modules/nanostores/**",
           "prisma/schema.prisma"
         ]
       }
