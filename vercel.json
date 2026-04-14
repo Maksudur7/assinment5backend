@@ -11,6 +11,7 @@
           "node_modules/better-auth/**",
           "node_modules/@better-auth/**",
           "node_modules/@better-fetch/**",
+          "node_modules/@noble/**",
           "node_modules/better-call/**",
           "node_modules/jose/**",
           "node_modules/kysely/**",
