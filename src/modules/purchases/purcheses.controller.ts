@@ -13,7 +13,8 @@ export async function allPurchasesController(_req: Request, res: Response) {
 
 export async function createPurchaseController(req: Request, res: Response) {
 	if (!req.user) throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
-	return res.status(201).json(await createPurchase(req.user.id, req.body || {}));
+	const idempotencyKey = req.header("Idempotency-Key") || null;
+	return res.status(201).json(await createPurchase(req.user.id, req.body || {}, idempotencyKey));
 }
 
 export async function revokePurchaseController(req: Request, res: Response) {

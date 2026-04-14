@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../../middleware/auth");
+const async_handler_1 = require("../../utils/async-handler");
+const payments_controller_1 = require("./payments.controller");
+const paymentsRouter = (0, express_1.Router)();
+paymentsRouter.post("/checkout/subscription", auth_1.authenticate, (0, async_handler_1.asyncHandler)(payments_controller_1.createSubscriptionCheckoutController));
+paymentsRouter.get("/checkout/:checkoutId/status", auth_1.authenticate, (0, async_handler_1.asyncHandler)(payments_controller_1.checkoutStatusController));
+paymentsRouter.get("/history", auth_1.authenticate, (0, async_handler_1.asyncHandler)(payments_controller_1.paymentHistoryController));
+paymentsRouter.post("/webhook/:provider", (0, async_handler_1.asyncHandler)(payments_controller_1.paymentWebhookController));
+exports.default = paymentsRouter;

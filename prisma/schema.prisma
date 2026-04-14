@@ -33,9 +33,34 @@ enum PurchaseProvider {
   razorpay
 }
 
+enum PaymentGatewayProvider {
+  stripe
+  sslcommerz
+  portwallet
+  bkash
+  nagad
+  rocket
+}
+
 enum PurchaseMethod {
   card
   wallet
+}
+
+enum PaymentMethodType {
+  visa
+  debit_card
+  credit_card
+  bkash
+  nagad
+  rocket
+}
+
+enum PaymentCheckoutStatus {
+  pending
+  processing
+  paid
+  failed
 }
 
 enum PurchaseStatus {
@@ -77,6 +102,7 @@ model User {
   watchProgresses  WatchProgress[]
   watchHistories   WatchHistory[]
   purchases        Purchase[]
+  paymentCheckouts PaymentCheckout[]
   resetTokens      PasswordResetToken[]
   sessions         Session[]
   accounts         Account[]
@@ -252,6 +278,8 @@ model Purchase {
   method                  PurchaseMethod
   amount                  Int
   cardLast4               String?
+  checkoutId              String?
+  gatewayTransactionId    String?
   sendConfirmationEmail   Boolean           @default(false)
   expiresAt               DateTime?
   status                  PurchaseStatus    @default(active)
@@ -276,6 +304,58 @@ model PasswordResetToken {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
+}
+
+model PaymentCheckout {
+  id                 String                @id @default(uuid())
+  checkoutId         String                @unique
+  transactionId      String                @unique
+  userId             String
+  type               PurchaseType          @default(subscription)
+  plan               PurchasePlan?
+  amount             Int
+  currency           String                @default("USD")
+  provider           PaymentGatewayProvider
+  method             PurchaseMethod
+  paymentMethodType  PaymentMethodType
+  cardLast4          String?
+  cardToken          String?
+  walletProvider     String?
+  walletNumberMasked String?
+  emailReceipt       Boolean               @default(false)
+  idempotencyKey     String?
+  status             PaymentCheckoutStatus @default(pending)
+  paymentUrl         String?
+  gatewayRef         String?
+  failedReason       String?
+  paidAt             DateTime?
+  metadata           Json?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  auditLogs          PaymentAuditLog[]
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@unique([userId, idempotencyKey])
+}
+
+model PaymentAuditLog {
+  id            String           @id @default(uuid())
+  checkoutId    String?
+  transactionId String?
+  source        String
+  event         String
+  requestBody   Json?
+  responseBody  Json?
+  responseCode  Int?
+  createdAt     DateTime         @default(now())
+
+  checkout      PaymentCheckout? @relation(fields: [checkoutId], references: [checkoutId], onDelete: SetNull)
+
+  @@index([checkoutId, createdAt])
+  @@index([transactionId, createdAt])
 }
 
 model Category {

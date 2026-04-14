@@ -45,6 +45,8 @@ APP_URL="http://localhost:3000"
 BETTER_AUTH_URL="http://localhost:4000"
 BETTER_AUTH_SECRET="your-strong-secret"
 STRIPE_SECRET_KEY="sk_test_xxx"
+PAYMENT_WEBHOOK_SECRET="replace-with-webhook-shared-secret"
+PAYMENT_TOKENIZATION_SECRET="replace-with-strong-tokenization-secret"
 JWT_SECRET="not-used-for-main-auth-right-now"
 JWT_EXPIRES_IN="7d"
 ```
@@ -82,6 +84,21 @@ Run dev server:
 ```bash
 npm run dev
 ```
+
+## Vercel Deployment
+
+This backend is Vercel-ready via the serverless entrypoint in `api/index.ts`.
+
+- Vercel routes all requests to the Express app.
+- Use PowerShell or the Vercel web dashboard if your shell doesn't recognize the `vercel` command.
+- Make sure these environment variables are set in Vercel:
+  - `DATABASE_URL`
+  - `APP_URL`
+  - `BETTER_AUTH_URL`
+  - `BETTER_AUTH_SECRET`
+  - `STRIPE_SECRET_KEY`
+  - `PAYMENT_WEBHOOK_SECRET`
+  - `PAYMENT_TOKENIZATION_SECRET`
 
 Build:
 
@@ -220,6 +237,39 @@ Configured in `src/app.ts`:
 - `GET /` (admin)
 - `POST /`
 - `POST /:purchaseId/revoke`
+
+### Payments (`/api/payments`)
+
+- `POST /checkout/subscription`
+- `GET /checkout/:checkoutId/status`
+- `GET /history`
+- `POST /webhook/:provider`
+
+## Frontend Checkout Integration (`/card`)
+
+Frontend env (Next.js):
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
+NEXT_PUBLIC_USE_REMOTE_API=true
+NEXT_PUBLIC_PAYMENT_API_URL=http://localhost:5000/api
+```
+
+Supported `paymentMethod` / `paymentMethodType` values:
+
+- `visa`
+- `debit_card`
+- `credit_card`
+- `bkash`
+- `nagad`
+- `rocket`
+
+Notes:
+
+- `Idempotency-Key` header supported for duplicate checkout protection.
+- Card payload is tokenized server-side (PAN/CVV are not persisted).
+- Wallet payload must provide `{ provider, number }`.
+- Subscription amount is always validated server-side from `plan`.
 
 ### Dashboard (`/api/dashboard`)
 

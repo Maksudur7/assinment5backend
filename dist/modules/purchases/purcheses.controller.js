@@ -17,7 +17,8 @@ async function allPurchasesController(_req, res) {
 async function createPurchaseController(req, res) {
     if (!req.user)
         throw new errors_1.AppError("Unauthorized", 401, "UNAUTHORIZED");
-    return res.status(201).json(await (0, purcheses_service_1.createPurchase)(req.user.id, req.body || {}));
+    const idempotencyKey = req.header("Idempotency-Key") || null;
+    return res.status(201).json(await (0, purcheses_service_1.createPurchase)(req.user.id, req.body || {}, idempotencyKey));
 }
 async function revokePurchaseController(req, res) {
     if (!req.user)
