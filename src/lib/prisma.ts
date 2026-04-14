@@ -4,14 +4,40 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 dotenv.config({ override: true });
 
-if (!process.env.DATABASE_URL) {
-	throw new Error("DATABASE_URL is missing. Please set it in .env");
+let prismaClient: PrismaClient | null = null;
+
+function createPrismaClient() {
+	const databaseUrl = process.env.DATABASE_URL;
+
+	if (!databaseUrl) {
+		throw new Error("DATABASE_URL is missing. Please set it in environment variables.");
+	}
+
+	if (databaseUrl.startsWith("prisma://") || databaseUrl.startsWith("prisma+postgres://")) {
+		return new PrismaClient({
+			accelerateUrl: databaseUrl,
+		});
+	}
+
+	return new PrismaClient({
+		adapter: new PrismaPg({ connectionString: databaseUrl }),
+	});
 }
 
-const databaseUrl = process.env.DATABASE_URL;
+function getPrismaClient() {
+	if (!prismaClient) {
+		prismaClient = createPrismaClient();
+	}
 
-const prisma = databaseUrl.startsWith("prisma://") || databaseUrl.startsWith("prisma+postgres://")
-	? new PrismaClient({ accelerateUrl: databaseUrl })
-	: new PrismaClient({ adapter: new PrismaPg(databaseUrl) });
+	return prismaClient;
+}
+
+const prisma = new Proxy({} as PrismaClient, {
+	get(_target, prop, receiver) {
+		const client = getPrismaClient();
+		const value = Reflect.get(client, prop, receiver);
+		return typeof value === "function" ? value.bind(client) : value;
+	},
+});
 
 export default prisma;

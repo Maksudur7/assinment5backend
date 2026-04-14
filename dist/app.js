@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
+const env_1 = require("./config/env");
 const auth_router_1 = __importDefault(require("./modules/auth/auth.router"));
 const media_router_1 = __importDefault(require("./modules/media/media.router"));
 const categories_router_1 = __importDefault(require("./modules/categories/categories.router"));
@@ -18,7 +19,24 @@ const dashboard_router_1 = __importDefault(require("./modules/dashboard/dashboar
 const error_handler_1 = require("./middleware/error-handler");
 const rate_limit_1 = require("./middleware/rate-limit");
 const app = (0, express_1.default)();
-app.use((0, cors_1.default)());
+const allowedOrigins = new Set([
+    env_1.env.appUrl,
+    env_1.env.frontendAppUrl,
+    ...(Array.isArray(env_1.env.frontendAppUrls) ? env_1.env.frontendAppUrls : []),
+]);
+const corsOptions = {
+    origin(origin, callback) {
+        if (!origin || allowedOrigins.has(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error("CORS origin not allowed"));
+    },
+    credentials: true,
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+};
+app.use((0, cors_1.default)(corsOptions));
+app.options("*", (0, cors_1.default)(corsOptions));
 app.use(express_1.default.json());
 app.use((0, rate_limit_1.rateLimiter)({ windowMs: 60 * 60 * 1000, max: 1000 }));
 app.use("/api/auth", (0, rate_limit_1.rateLimiter)({ windowMs: 60 * 1000, max: 10 }));

@@ -20,7 +20,7 @@ const app = express();
 const allowedOrigins = new Set([
   env.appUrl,
   env.frontendAppUrl,
-  ...env.frontendAppUrls,
+  ...(Array.isArray(env.frontendAppUrls) ? env.frontendAppUrls : []),
 ]);
 
 const corsOptions = {
@@ -29,7 +29,7 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    return callback(new Error(`CORS blocked for origin: ${origin}`));
+    return callback(new Error("CORS origin not allowed"));
   },
   credentials: true,
   methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
