@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 
+import { env } from "./config/env";
 import authRouter from "./modules/auth/auth.router";
 import mediaRouter from "./modules/media/media.router";
 import categoriesRouter from "./modules/categories/categories.router";
@@ -16,7 +17,27 @@ import { rateLimiter } from "./middleware/rate-limit";
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = new Set([
+  env.appUrl,
+  env.frontendAppUrl,
+  ...env.frontendAppUrls,
+]);
+
+const corsOptions = {
+  origin(origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) {
+    if (!origin || allowedOrigins.has(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
+  credentials: true,
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json());
 
 app.use(rateLimiter({ windowMs: 60 * 60 * 1000, max: 1000 }));
