@@ -36,7 +36,6 @@ const corsOptions = {
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
 };
 app.use((0, cors_1.default)(corsOptions));
-app.options("*", (0, cors_1.default)(corsOptions));
 app.use(express_1.default.json());
 app.use((0, rate_limit_1.rateLimiter)({ windowMs: 60 * 60 * 1000, max: 1000 }));
 app.use("/api/auth", (0, rate_limit_1.rateLimiter)({ windowMs: 60 * 1000, max: 10 }));

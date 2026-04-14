@@ -37,7 +37,6 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
 app.use(express.json());
 
 app.use(rateLimiter({ windowMs: 60 * 60 * 1000, max: 1000 }));
