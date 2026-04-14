@@ -15,11 +15,12 @@ exports.revokeCurrentSession = revokeCurrentSession;
 exports.refreshProviderToken = refreshProviderToken;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const crypto_1 = __importDefault(require("crypto"));
-const better_auth_1 = require("../../lib/better-auth");
 const prisma_1 = __importDefault(require("../../lib/prisma"));
 const errors_1 = require("../../utils/errors");
+const better_auth_1 = require("../../lib/better-auth");
 async function signUpWithEmail(name, email, password) {
-    const res = await better_auth_1.auth.api.signUpEmail({
+    const auth = await (0, better_auth_1.getAuth)();
+    const res = await auth.api.signUpEmail({
         body: { name, email, password },
         asResponse: false,
     });
@@ -35,7 +36,8 @@ async function signUpWithEmail(name, email, password) {
     };
 }
 async function signInWithEmail(email, password) {
-    const res = await better_auth_1.auth.api.signInEmail({
+    const auth = await (0, better_auth_1.getAuth)();
+    const res = await auth.api.signInEmail({
         body: { email, password },
         asResponse: false,
     });
@@ -55,6 +57,7 @@ async function signInWithEmail(email, password) {
     };
 }
 async function socialSignIn(provider, idToken) {
+    const auth = await (0, better_auth_1.getAuth)();
     if (!["google", "github", "facebook"].includes(provider)) {
         throw new errors_1.AppError("Invalid provider", 422, "VALIDATION_ERROR");
     }
@@ -72,13 +75,13 @@ async function socialSignIn(provider, idToken) {
             },
         });
     }
-    const signin = await better_auth_1.auth.api.signInEmail({
+    const signin = await auth.api.signInEmail({
         body: { email: pseudoEmail, password: pseudoPassword },
         asResponse: false,
     }).catch(async () => {
         const hash = await bcryptjs_1.default.hash(pseudoPassword, 10);
         await prisma_1.default.user.update({ where: { id: user.id }, data: { passwordHash: hash } });
-        return better_auth_1.auth.api.signInEmail({ body: { email: pseudoEmail, password: pseudoPassword }, asResponse: false });
+        return auth.api.signInEmail({ body: { email: pseudoEmail, password: pseudoPassword }, asResponse: false });
     });
     return {
         id: user.id,
@@ -124,20 +127,24 @@ async function getSessionUser(userId) {
     return { user };
 }
 async function getCurrentSession(headers) {
-    return better_auth_1.auth.api.getSession({ headers, asResponse: false });
+    const auth = await (0, better_auth_1.getAuth)();
+    return auth.api.getSession({ headers, asResponse: false });
 }
 async function listActiveSessions(headers) {
-    return better_auth_1.auth.api.listSessions({ headers, asResponse: false });
+    const auth = await (0, better_auth_1.getAuth)();
+    return auth.api.listSessions({ headers, asResponse: false });
 }
 async function revokeCurrentSession(headers, token) {
-    return better_auth_1.auth.api.revokeSession({
+    const auth = await (0, better_auth_1.getAuth)();
+    return auth.api.revokeSession({
         headers,
         body: { token },
         asResponse: false,
     });
 }
 async function refreshProviderToken(headers, providerId, accountId, userId) {
-    return better_auth_1.auth.api.refreshToken({
+    const auth = await (0, better_auth_1.getAuth)();
+    return auth.api.refreshToken({
         headers,
         body: { providerId, ...(accountId ? { accountId } : {}), ...(userId ? { userId } : {}) },
         asResponse: false,

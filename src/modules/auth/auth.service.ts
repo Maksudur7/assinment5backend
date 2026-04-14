@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { auth } from "../../lib/better-auth";
 import prisma from "../../lib/prisma";
 import { AppError } from "../../utils/errors";
+import { getAuth } from "../../lib/better-auth";
 
 type AuthUser = {
 	id: string;
@@ -12,6 +12,7 @@ type AuthUser = {
 };
 
 export async function signUpWithEmail(name: string, email: string, password: string) {
+	const auth = await getAuth();
 	const res = await auth.api.signUpEmail({
 		body: { name, email, password },
 		asResponse: false,
@@ -30,6 +31,7 @@ export async function signUpWithEmail(name: string, email: string, password: str
 }
 
 export async function signInWithEmail(email: string, password: string) {
+	const auth = await getAuth();
 	const res = await auth.api.signInEmail({
 		body: { email, password },
 		asResponse: false,
@@ -53,6 +55,7 @@ export async function signInWithEmail(email: string, password: string) {
 }
 
 export async function socialSignIn(provider: string, idToken: string) {
+	const auth = await getAuth();
 	if (!["google", "github", "facebook"].includes(provider)) {
 		throw new AppError("Invalid provider", 422, "VALIDATION_ERROR");
 	}
@@ -135,14 +138,17 @@ export async function getSessionUser(userId: string) {
 }
 
 export async function getCurrentSession(headers: Headers) {
+	const auth = await getAuth();
 	return auth.api.getSession({ headers, asResponse: false });
 }
 
 export async function listActiveSessions(headers: Headers) {
+	const auth = await getAuth();
 	return auth.api.listSessions({ headers, asResponse: false });
 }
 
 export async function revokeCurrentSession(headers: Headers, token: string) {
+	const auth = await getAuth();
 	return auth.api.revokeSession({
 		headers,
 		body: { token },
@@ -151,6 +157,7 @@ export async function revokeCurrentSession(headers: Headers, token: string) {
 }
 
 export async function refreshProviderToken(headers: Headers, providerId: string, accountId?: string, userId?: string) {
+	const auth = await getAuth();
 	return auth.api.refreshToken({
 		headers,
 		body: { providerId, ...(accountId ? { accountId } : {}), ...(userId ? { userId } : {}) },
