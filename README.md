@@ -42,6 +42,7 @@ Create `.env` in project root:
 DATABASE_URL="postgresql://<user>:<pass>@<host>/<db>?sslmode=require"
 PORT="4000"
 APP_URL="http://localhost:3000"
+FRONTEND_APP_URL="https://ngv-black.vercel.app"
 BETTER_AUTH_URL="http://localhost:4000"
 BETTER_AUTH_SECRET="your-strong-secret"
 STRIPE_SECRET_KEY="sk_test_xxx"
@@ -94,6 +95,7 @@ This backend is Vercel-ready via the serverless entrypoint in `api/index.ts`.
 - Make sure these environment variables are set in Vercel:
   - `DATABASE_URL`
   - `APP_URL`
+  - `FRONTEND_APP_URL` (set: `https://ngv-black.vercel.app`)
   - `BETTER_AUTH_URL`
   - `BETTER_AUTH_SECRET`
   - `STRIPE_SECRET_KEY`
