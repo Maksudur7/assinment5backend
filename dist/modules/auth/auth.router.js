@@ -1,18 +1,38 @@
 "use strict";
+// import { Router } from "express";
+// import { asyncHandler } from "../../utils/async-handler";
+// import { authenticate } from "../../middleware/auth";
+// import {
+// 	emailSigninController,
+// 	emailSignupController,
+// 	forgotPasswordController,
+// 	resetPasswordController,
+// 	sessionController,
+// 	sessionsController,
+// 	refreshTokenController,
+// 	revokeSessionController,
+// 	signoutController,
+// 	socialSigninController,
+// } from "./auth.controller";
 Object.defineProperty(exports, "__esModule", { value: true });
+// const authRouter = Router();
+// authRouter.post("/email/signup", asyncHandler(emailSignupController));
+// authRouter.post("/email/signin", asyncHandler(emailSigninController));
+// authRouter.post("/social/signin", asyncHandler(socialSigninController));
+// authRouter.post("/forgot-password", asyncHandler(forgotPasswordController));
+// authRouter.post("/reset-password", asyncHandler(resetPasswordController));
+// authRouter.get("/session", authenticate, asyncHandler(sessionController));
+// authRouter.get("/sessions", authenticate, asyncHandler(sessionsController));
+// authRouter.post("/sessions/revoke", authenticate, asyncHandler(revokeSessionController));
+// authRouter.post("/refresh-token", authenticate, asyncHandler(refreshTokenController));
+// authRouter.post("/signout", asyncHandler(signoutController));
+// export default authRouter;
 const express_1 = require("express");
-const async_handler_1 = require("../../utils/async-handler");
-const auth_1 = require("../../middleware/auth");
-const auth_controller_1 = require("./auth.controller");
+const better_auth_1 = require("../../lib/better-auth");
 const authRouter = (0, express_1.Router)();
-authRouter.post("/email/signup", (0, async_handler_1.asyncHandler)(auth_controller_1.emailSignupController));
-authRouter.post("/email/signin", (0, async_handler_1.asyncHandler)(auth_controller_1.emailSigninController));
-authRouter.post("/social/signin", (0, async_handler_1.asyncHandler)(auth_controller_1.socialSigninController));
-authRouter.post("/forgot-password", (0, async_handler_1.asyncHandler)(auth_controller_1.forgotPasswordController));
-authRouter.post("/reset-password", (0, async_handler_1.asyncHandler)(auth_controller_1.resetPasswordController));
-authRouter.get("/session", auth_1.authenticate, (0, async_handler_1.asyncHandler)(auth_controller_1.sessionController));
-authRouter.get("/sessions", auth_1.authenticate, (0, async_handler_1.asyncHandler)(auth_controller_1.sessionsController));
-authRouter.post("/sessions/revoke", auth_1.authenticate, (0, async_handler_1.asyncHandler)(auth_controller_1.revokeSessionController));
-authRouter.post("/refresh-token", auth_1.authenticate, (0, async_handler_1.asyncHandler)(auth_controller_1.refreshTokenController));
-authRouter.post("/signout", (0, async_handler_1.asyncHandler)(auth_controller_1.signoutController));
+authRouter.use(async (req, res) => {
+    const auth = await (0, better_auth_1.getAuth)();
+    const response = await auth.handler(req);
+    return res.send(response);
+});
 exports.default = authRouter;

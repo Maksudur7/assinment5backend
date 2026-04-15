@@ -18,6 +18,7 @@ async function emailSignupController(req, res) {
         throw new errors_1.AppError("name, email, password required", 422, "VALIDATION_ERROR");
     }
     const user = await (0, auth_service_1.signUpWithEmail)(name, email, password);
+    console.log('auth controller signup', user);
     return res.status(200).json(user);
 }
 async function emailSigninController(req, res) {
@@ -26,6 +27,7 @@ async function emailSigninController(req, res) {
         throw new errors_1.AppError("email, password required", 422, "VALIDATION_ERROR");
     }
     const user = await (0, auth_service_1.signInWithEmail)(email, password);
+    console.log('auth controller signin', user);
     return res.status(200).json(user);
 }
 async function socialSigninController(req, res) {
@@ -34,6 +36,7 @@ async function socialSigninController(req, res) {
         throw new errors_1.AppError("provider, idToken required", 422, "VALIDATION_ERROR");
     }
     const user = await (0, auth_service_1.socialSignIn)(provider, idToken);
+    console.log('auth controller social signin', user);
     return res.status(200).json(user);
 }
 async function forgotPasswordController(req, res) {

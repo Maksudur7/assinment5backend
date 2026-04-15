@@ -19,6 +19,7 @@ export async function emailSignupController(req: Request, res: Response) {
 		throw new AppError("name, email, password required", 422, "VALIDATION_ERROR");
 	}
 	const user = await signUpWithEmail(name, email, password);
+	console.log('auth controller signup', user);
 	return res.status(200).json(user);
 }
 
@@ -28,6 +29,8 @@ export async function emailSigninController(req: Request, res: Response) {
 		throw new AppError("email, password required", 422, "VALIDATION_ERROR");
 	}
 	const user = await signInWithEmail(email, password);
+		console.log('auth controller signin', user);
+
 	return res.status(200).json(user);
 }
 
@@ -37,6 +40,7 @@ export async function socialSigninController(req: Request, res: Response) {
 		throw new AppError("provider, idToken required", 422, "VALIDATION_ERROR");
 	}
 	const user = await socialSignIn(provider, idToken);
+	console.log('auth controller social signin', user);
 	return res.status(200).json(user);
 }
 

@@ -27,12 +27,14 @@ async function signUpWithEmail(name, email, password) {
     const user = await prisma_1.default.user.findUnique({ where: { email } });
     if (!user)
         throw new errors_1.AppError("USER_NOT_FOUND", 404, "USER_NOT_FOUND");
+    console.log('auth service signup', user);
+    const sessionToken = res?.session?.token || res?.token;
     return {
         id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
-        token: res.token || null,
+        token: sessionToken || null,
     };
 }
 async function signInWithEmail(email, password) {
@@ -41,19 +43,23 @@ async function signInWithEmail(email, password) {
         body: { email, password },
         asResponse: false,
     });
+    if (!res) {
+        throw new errors_1.AppError("Invalid credentials", 401, "INVALID_CREDENTIALS");
+    }
     const user = await prisma_1.default.user.findUnique({ where: { email } });
     if (!user)
         throw new errors_1.AppError("USER_NOT_FOUND", 404, "USER_NOT_FOUND");
-    const token = res.token;
-    if (!token) {
-        throw new errors_1.AppError("Invalid credentials", 401, "INVALID_CREDENTIALS");
+    console.log('auth service signin', user);
+    const sessionToken = res?.session?.token || res?.token;
+    if (!sessionToken) {
+        throw new errors_1.AppError("Authentication failed", 401, "INVALID_CREDENTIALS");
     }
     return {
         id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
-        token,
+        token: sessionToken,
     };
 }
 async function socialSignIn(provider, idToken) {
@@ -75,20 +81,29 @@ async function socialSignIn(provider, idToken) {
             },
         });
     }
-    const signin = await auth.api.signInEmail({
+    const signin = await auth.api
+        .signInEmail({
         body: { email: pseudoEmail, password: pseudoPassword },
         asResponse: false,
-    }).catch(async () => {
+    })
+        .catch(async () => {
         const hash = await bcryptjs_1.default.hash(pseudoPassword, 10);
-        await prisma_1.default.user.update({ where: { id: user.id }, data: { passwordHash: hash } });
-        return auth.api.signInEmail({ body: { email: pseudoEmail, password: pseudoPassword }, asResponse: false });
+        await prisma_1.default.user.update({
+            where: { id: user.id },
+            data: { passwordHash: hash },
+        });
+        return await auth.api.signInEmail({
+            body: { email: pseudoEmail, password: pseudoPassword },
+            asResponse: false,
+        });
     });
+    const sessionToken = signin?.session?.token || signin?.token;
     return {
         id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
-        token: signin.token,
+        token: sessionToken,
     };
 }
 async function forgotPassword(email) {
@@ -106,14 +121,19 @@ async function forgotPassword(email) {
     return { success: true, message: "Password reset email sent" };
 }
 async function resetPassword(token, newPassword) {
-    const reset = await prisma_1.default.passwordResetToken.findUnique({ where: { token } });
+    const reset = await prisma_1.default.passwordResetToken.findUnique({
+        where: { token },
+    });
     if (!reset || reset.usedAt || reset.expiresAt < new Date()) {
         throw new errors_1.AppError("Invalid or expired reset token", 400, "VALIDATION_ERROR");
     }
     const passwordHash = await bcryptjs_1.default.hash(newPassword, 10);
     await prisma_1.default.$transaction([
         prisma_1.default.user.update({ where: { id: reset.userId }, data: { passwordHash } }),
-        prisma_1.default.passwordResetToken.update({ where: { id: reset.id }, data: { usedAt: new Date() } }),
+        prisma_1.default.passwordResetToken.update({
+            where: { id: reset.id },
+            data: { usedAt: new Date() },
+        }),
     ]);
     return { success: true, message: "Password reset successful" };
 }
@@ -146,7 +166,11 @@ async function refreshProviderToken(headers, providerId, accountId, userId) {
     const auth = await (0, better_auth_1.getAuth)();
     return auth.api.refreshToken({
         headers,
-        body: { providerId, ...(accountId ? { accountId } : {}), ...(userId ? { userId } : {}) },
+        body: {
+            providerId,
+            ...(accountId ? { accountId } : {}),
+            ...(userId ? { userId } : {}),
+        },
         asResponse: false,
     });
 }

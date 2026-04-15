@@ -25,6 +25,9 @@ export async function signUpWithEmail(
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) throw new AppError("USER_NOT_FOUND", 404, "USER_NOT_FOUND");
 
+  	console.log('auth service signup', user);
+
+
   const sessionToken = (res as any)?.session?.token || (res as any)?.token;
 
   return {
@@ -50,6 +53,9 @@ export async function signInWithEmail(email: string, password: string) {
 
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) throw new AppError("USER_NOT_FOUND", 404, "USER_NOT_FOUND");
+
+  	console.log('auth service signin', user);
+
 
   const sessionToken = (res as any)?.session?.token || (res as any)?.token;
 
