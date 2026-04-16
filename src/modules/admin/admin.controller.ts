@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
-import { approveReview, createMedia, getAdminOverview, listPendingReviews, rejectReview } from "./admin.service";
+import { approveReview, createMedia, getAdminOverview, listPendingReviews, listPendingComments, rejectReview } from "./admin.service";
+export async function pendingCommentsController(_req: Request, res: Response) {
+	return res.status(200).json(await listPendingComments());
+}
 
 export async function adminOverviewController(_req: Request, res: Response) {
 	return res.status(200).json(await getAdminOverview());

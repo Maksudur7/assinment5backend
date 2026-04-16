@@ -6,6 +6,7 @@ import {
 	approveReviewController,
 	createMediaController,
 	pendingReviewsController,
+	pendingCommentsController,
 	rejectReviewController,
 } from "./admin.controller";
 
@@ -15,6 +16,7 @@ adminRouter.use(authenticate, requireAdmin);
 
 adminRouter.get("/overview", asyncHandler(adminOverviewController));
 adminRouter.get("/reviews/pending", asyncHandler(pendingReviewsController));
+adminRouter.get("/comments/pending", asyncHandler(pendingCommentsController));
 adminRouter.post("/reviews/:reviewId/approve", asyncHandler(approveReviewController));
 adminRouter.post("/reviews/:reviewId/reject", asyncHandler(rejectReviewController));
 adminRouter.post("/media", asyncHandler(createMediaController));
