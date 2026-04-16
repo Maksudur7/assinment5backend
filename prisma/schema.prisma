@@ -82,18 +82,18 @@ enum ModerationStatus {
 }
 
 model User {
-  id          String               @id @default(uuid())
-  name        String
-  email       String               @unique
-  emailVerified Boolean            @default(false)
-  image       String?
-  passwordHash String?
-  role        UserRole             @default(user)
-  provider    String?
-  providerId  String?
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
-  lastLoginAt DateTime?
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  passwordHash  String?
+  role          UserRole  @default(user)
+  provider      String?
+  providerId    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
 
   reviews          Review[]
   reviewLikes      ReviewLike[]
@@ -121,7 +121,7 @@ model Session {
   userAgent String?
   userId    String
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -141,7 +141,7 @@ model Account {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -156,7 +156,7 @@ model Verification {
 }
 
 model Media {
-  id           String         @id @default(uuid())
+  id           String      @id @default(uuid())
   title        String
   synopsis     String
   genres       String[]
@@ -164,13 +164,13 @@ model Media {
   director     String
   cast         String[]
   platforms    String[]
-  pricing      PricingType    @default(free)
-  streamingUrl String         @unique
+  pricing      PricingType @default(free)
+  streamingUrl String      @unique
   poster       String
   duration     String
-  popularity   Int            @default(0)
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  popularity   Int         @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   reviews         Review[]
   watchlistItems  WatchlistItem[]
@@ -184,22 +184,22 @@ model Media {
 }
 
 model Review {
-  id               String            @id @default(uuid())
-  mediaId           String
-  userId            String
-  rating            Int
-  content           String
-  tags              String[]
-  spoiler           Boolean           @default(false)
-  isPublished       Boolean           @default(false)
-  moderationStatus  ModerationStatus  @default(PENDING)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  id               String           @id @default(uuid())
+  mediaId          String
+  userId           String
+  rating           Int
+  content          String
+  tags             String[]
+  spoiler          Boolean          @default(false)
+  isPublished      Boolean          @default(false)
+  moderationStatus ModerationStatus @default(PENDING)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
-  media             Media             @relation(fields: [mediaId], references: [id], onDelete: Cascade)
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  likes             ReviewLike[]
-  comments          ReviewComment[]
+  media    Media           @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes    ReviewLike[]
+  comments ReviewComment[]
 
   @@index([mediaId, isPublished])
   @@index([userId])
@@ -207,8 +207,8 @@ model Review {
 }
 
 model ReviewLike {
-  reviewId String
-  userId   String
+  reviewId  String
+  userId    String
   createdAt DateTime @default(now())
 
   review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
@@ -219,38 +219,38 @@ model ReviewLike {
 
 model ReviewComment {
   id              String   @id @default(uuid())
-  reviewId         String
-  userId           String
-  content          String
-  parentCommentId  String?
-  createdAt        DateTime @default(now())
+  reviewId        String
+  userId          String
+  content         String
+  parentCommentId String?
+  createdAt       DateTime @default(now())
 
-  review           Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([reviewId, createdAt])
 }
 
 model WatchlistItem {
-  userId    String
-  mediaId   String
-  addedAt   DateTime @default(now())
+  userId  String
+  mediaId String
+  addedAt DateTime @default(now())
 
-  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  media     Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
 
   @@id([userId, mediaId])
   @@index([addedAt])
 }
 
 model WatchProgress {
-  userId           String
-  mediaId          String
-  progressSeconds  Int      @default(0)
-  updatedAt        DateTime @updatedAt
+  userId          String
+  mediaId         String
+  progressSeconds Int      @default(0)
+  updatedAt       DateTime @updatedAt
 
-  user             User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  media            Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
 
   @@id([userId, mediaId])
 }
@@ -262,59 +262,59 @@ model WatchHistory {
   watchedAt       DateTime @default(now())
   progressSeconds Int      @default(0)
 
-  user            User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  media           Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media Media @relation(fields: [mediaId], references: [id], onDelete: Cascade)
 
   @@index([userId, watchedAt])
 }
 
 model Purchase {
-  id                      String            @id @default(uuid())
-  userId                  String
-  mediaId                 String?
-  type                    PurchaseType
-  plan                    PurchasePlan?
-  provider                PurchaseProvider
-  method                  PurchaseMethod
-  amount                  Int
-  cardLast4               String?
-  checkoutId              String?
-  gatewayTransactionId    String?
-  sendConfirmationEmail   Boolean           @default(false)
-  expiresAt               DateTime?
-  status                  PurchaseStatus    @default(active)
-  createdAt               DateTime          @default(now())
-  updatedAt               DateTime          @updatedAt
+  id                    String           @id @default(uuid())
+  userId                String
+  mediaId               String?
+  type                  PurchaseType
+  plan                  PurchasePlan?
+  provider              PurchaseProvider
+  method                PurchaseMethod
+  amount                Int
+  cardLast4             String?
+  checkoutId            String?
+  gatewayTransactionId  String?
+  sendConfirmationEmail Boolean          @default(false)
+  expiresAt             DateTime?
+  status                PurchaseStatus   @default(active)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
 
-  user                    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  media                   Media? @relation(fields: [mediaId], references: [id], onDelete: SetNull)
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media Media? @relation(fields: [mediaId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@index([status])
 }
 
 model PasswordResetToken {
-  id         String   @id @default(uuid())
-  userId     String
-  token      String   @unique
-  expiresAt  DateTime
-  usedAt     DateTime?
-  createdAt  DateTime @default(now())
+  id        String    @id @default(uuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
 }
 
 model PaymentCheckout {
-  id                 String                @id @default(uuid())
-  checkoutId         String                @unique
-  transactionId      String                @unique
+  id                 String                 @id @default(uuid())
+  checkoutId         String                 @unique
+  transactionId      String                 @unique
   userId             String
-  type               PurchaseType          @default(subscription)
+  type               PurchaseType           @default(subscription)
   plan               PurchasePlan?
   amount             Int
-  currency           String                @default("USD")
+  currency           String                 @default("USD")
   provider           PaymentGatewayProvider
   method             PurchaseMethod
   paymentMethodType  PaymentMethodType
@@ -322,27 +322,27 @@ model PaymentCheckout {
   cardToken          String?
   walletProvider     String?
   walletNumberMasked String?
-  emailReceipt       Boolean               @default(false)
+  emailReceipt       Boolean                @default(false)
   idempotencyKey     String?
-  status             PaymentCheckoutStatus @default(pending)
+  status             PaymentCheckoutStatus  @default(pending)
   paymentUrl         String?
   gatewayRef         String?
   failedReason       String?
   paidAt             DateTime?
   metadata           Json?
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @updatedAt
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
 
-  user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  auditLogs          PaymentAuditLog[]
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  auditLogs PaymentAuditLog[]
 
+  @@unique([userId, idempotencyKey])
   @@index([userId, createdAt])
   @@index([status])
-  @@unique([userId, idempotencyKey])
 }
 
 model PaymentAuditLog {
-  id            String           @id @default(uuid())
+  id            String   @id @default(uuid())
   checkoutId    String?
   transactionId String?
   source        String
@@ -350,9 +350,9 @@ model PaymentAuditLog {
   requestBody   Json?
   responseBody  Json?
   responseCode  Int?
-  createdAt     DateTime         @default(now())
+  createdAt     DateTime @default(now())
 
-  checkout      PaymentCheckout? @relation(fields: [checkoutId], references: [checkoutId], onDelete: SetNull)
+  checkout PaymentCheckout? @relation(fields: [checkoutId], references: [checkoutId], onDelete: SetNull)
 
   @@index([checkoutId, createdAt])
   @@index([transactionId, createdAt])

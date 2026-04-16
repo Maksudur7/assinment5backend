@@ -1,3 +1,4 @@
+
 import express from "express";
 import cors from "cors";
 
@@ -16,6 +17,10 @@ import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { rateLimiter } from "./middleware/rate-limit";
 
 const app = express();
+
+app.get("/", (_req, res) => {
+  res.json({ message: "NGV backend running!" });
+});
 
 const allowedOrigins = new Set([
   env.appUrl,

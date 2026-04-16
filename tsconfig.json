@@ -10,8 +10,11 @@
     "outDir": "dist",
     "rootDir": "src",
     "resolveJsonModule": true,
-    "types": ["node"]
+    "types": ["node"],
+    "typeRoots": ["./types", "./node_modules/@types"]
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "types"],
   "exclude": ["node_modules", "dist"]
+,
+  "files": ["types/express.d.ts"]
 }
