@@ -30,9 +30,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const better_auth_1 = require("../../lib/better-auth");
 const authRouter = (0, express_1.Router)();
+// এখানে কোনো পাথ না দিয়ে সরাসরি মিডলওয়্যার হিসেবে ব্যবহার করুন
+// এটি সব ধরণের সাব-পাথ (signin, signup, session) অটোমেটিক হ্যান্ডেল করবে
 authRouter.use(async (req, res) => {
-    const auth = await (0, better_auth_1.getAuth)();
-    const response = await auth.handler(req);
-    return res.send(response);
+    try {
+        const auth = await (0, better_auth_1.getAuth)();
+        const response = await auth.handler(req);
+        return res.send(response);
+    }
+    catch (error) {
+        console.error("❌ Better Auth Router Error:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
 });
 exports.default = authRouter;

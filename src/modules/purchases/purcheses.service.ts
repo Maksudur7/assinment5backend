@@ -157,14 +157,8 @@ async function createGatewaySession(params: {
 		};
 	}
 
-	const txn = `txn_${crypto.randomBytes(10).toString("hex")}`;
-	return {
-		transactionId: txn,
-		paymentUrl: `https://gateway.example/redirect/${params.checkoutId}`,
-		clientSecret: `pi_${crypto.randomBytes(12).toString("hex")}`,
-		gatewayRef: txn,
-		status: "pending",
-	};
+	// If not stripe, must implement real gateway logic
+	throw new AppError("Payment gateway not implemented for this provider/method. No dummy data allowed.", 501, "NOT_IMPLEMENTED");
 }
 
 async function ensureSubscriptionEntitlement(checkout: {

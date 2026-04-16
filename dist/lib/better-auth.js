@@ -14,19 +14,25 @@ async function nativeImport(specifier) {
 async function getAuth() {
     if (!authInstance) {
         authInstance = (async () => {
-            const { betterAuth } = await nativeImport("better-auth");
-            const { prismaAdapter } = await nativeImport("better-auth/adapters/prisma");
-            return betterAuth({
-                secret: env_1.env.betterAuthSecret,
-                baseURL: env_1.env.betterAuthUrl,
-                database: prismaAdapter(prisma_1.default, {
-                    provider: "postgresql",
-                }),
-                emailAndPassword: {
-                    enabled: true,
-                },
-                trustedOrigins: Array.from(new Set([env_1.env.appUrl, env_1.env.betterAuthUrl, ...env_1.env.frontendAppUrls])),
-            });
+            try {
+                const { betterAuth } = await nativeImport("better-auth");
+                const { prismaAdapter } = await nativeImport("better-auth/adapters/prisma");
+                return betterAuth({
+                    secret: env_1.env.betterAuthSecret || "a_very_long_secret_key_123", // নিশ্চিত করুন সিক্রেট আছে
+                    baseURL: env_1.env.betterAuthUrl, // এটি কি http://localhost:4000/api/auth ?
+                    database: prismaAdapter(prisma_1.default, {
+                        provider: "postgresql",
+                    }),
+                    emailAndPassword: {
+                        enabled: true,
+                    },
+                    trustedOrigins: Array.from(new Set([env_1.env.appUrl, env_1.env.betterAuthUrl, ...env_1.env.frontendAppUrls])),
+                });
+            }
+            catch (e) {
+                console.error("🔴 Better Auth Initialization Failed:", e); // এই লগটি দেখুন
+                throw e;
+            }
         })();
     }
     return authInstance;

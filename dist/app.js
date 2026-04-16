@@ -19,6 +19,9 @@ const dashboard_router_1 = __importDefault(require("./modules/dashboard/dashboar
 const error_handler_1 = require("./middleware/error-handler");
 const rate_limit_1 = require("./middleware/rate-limit");
 const app = (0, express_1.default)();
+app.get("/", (_req, res) => {
+    res.json({ message: "NGV backend running!" });
+});
 const allowedOrigins = new Set([
     env_1.env.appUrl,
     env_1.env.frontendAppUrl,
