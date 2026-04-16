@@ -15,4 +15,5 @@ export const env = {
   paymentTokenizationSecret: process.env.PAYMENT_TOKENIZATION_SECRET || process.env.BETTER_AUTH_SECRET || "replace-with-strong-tokenization-secret",
   betterAuthSecret: process.env.BETTER_AUTH_SECRET || "replace-with-strong-better-auth-secret",
   betterAuthUrl: process.env.BETTER_AUTH_URL || "http://localhost:4000",
+  
 };
