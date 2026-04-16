@@ -17,6 +17,7 @@ async function getAuth() {
             try {
                 const { betterAuth } = await nativeImport("better-auth");
                 const { prismaAdapter } = await nativeImport("better-auth/adapters/prisma");
+                console.log('🔎 [DEBUG] betterAuth baseURL:', env_1.env.betterAuthUrl);
                 return betterAuth({
                     secret: env_1.env.betterAuthSecret || "a_very_long_secret_key_123", // নিশ্চিত করুন সিক্রেট আছে
                     baseURL: env_1.env.betterAuthUrl, // এটি কি http://localhost:4000/api/auth ?

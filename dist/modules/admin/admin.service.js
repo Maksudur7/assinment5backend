@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.listPendingComments = listPendingComments;
 exports.getAdminOverview = getAdminOverview;
 exports.listPendingReviews = listPendingReviews;
 exports.approveReview = approveReview;
@@ -11,13 +12,35 @@ exports.createMedia = createMedia;
 const prisma_1 = __importDefault(require("../../lib/prisma"));
 const errors_1 = require("../../utils/errors");
 const media_1 = require("../../utils/media");
+async function listPendingComments() {
+    try {
+        const comments = await prisma_1.default.reviewComment.findMany({
+            where: { review: { moderationStatus: "PENDING" } },
+            include: { user: true, review: { include: { media: true } } },
+        });
+        return comments.map((item) => ({
+            id: item.id,
+            reviewId: item.reviewId,
+            userName: item.user?.name || "",
+            content: item.content,
+            createdAt: item.createdAt,
+            reviewTitle: item.review?.media?.title || "",
+        }));
+    }
+    catch (e) {
+        // Table/field missing: return empty array to avoid crash
+        return [];
+    }
+}
 async function getAdminOverview() {
-    const [totalUsers, totalMedia, purchases, pendingReviews, activeSubscriptions] = await Promise.all([
+    const [totalUsers, totalMedia, purchases, pendingReviews, activeSubscriptions,] = await Promise.all([
         prisma_1.default.user.count(),
         prisma_1.default.media.count(),
         prisma_1.default.purchase.findMany({ where: { status: "active" } }),
         prisma_1.default.review.count({ where: { moderationStatus: "PENDING" } }),
-        prisma_1.default.purchase.count({ where: { type: "subscription", status: "active" } }),
+        prisma_1.default.purchase.count({
+            where: { type: "subscription", status: "active" },
+        }),
     ]);
     return {
         totalUsers,
@@ -28,7 +51,10 @@ async function getAdminOverview() {
     };
 }
 async function listPendingReviews() {
-    const reviews = await prisma_1.default.review.findMany({ where: { moderationStatus: "PENDING" }, include: { user: true, media: true } });
+    const reviews = await prisma_1.default.review.findMany({
+        where: { moderationStatus: "PENDING" },
+        include: { user: true, media: true },
+    });
     return reviews.map((item) => ({
         id: item.id,
         mediaTitle: item.media.title,
@@ -42,14 +68,20 @@ async function approveReview(reviewId) {
     const review = await prisma_1.default.review.findUnique({ where: { id: reviewId } });
     if (!review)
         throw new errors_1.AppError("Review not found", 404, "REVIEW_NOT_FOUND");
-    await prisma_1.default.review.update({ where: { id: reviewId }, data: { moderationStatus: "APPROVED", isPublished: true } });
+    await prisma_1.default.review.update({
+        where: { id: reviewId },
+        data: { moderationStatus: "APPROVED", isPublished: true },
+    });
     return { success: true, reviewId };
 }
 async function rejectReview(reviewId) {
     const review = await prisma_1.default.review.findUnique({ where: { id: reviewId } });
     if (!review)
         throw new errors_1.AppError("Review not found", 404, "REVIEW_NOT_FOUND");
-    await prisma_1.default.review.update({ where: { id: reviewId }, data: { moderationStatus: "REJECTED", isPublished: false } });
+    await prisma_1.default.review.update({
+        where: { id: reviewId },
+        data: { moderationStatus: "REJECTED", isPublished: false },
+    });
     return { success: true, reviewId };
 }
 async function createMedia(payload) {
