@@ -13,4 +13,8 @@ mediaRouter.get("/recommendations", auth_1.authenticate, (0, async_handler_1.asy
 mediaRouter.get("/:id", (0, async_handler_1.asyncHandler)(media_controller_1.getMediaController));
 mediaRouter.put("/:id", auth_1.authenticate, auth_1.requireAdmin, (0, async_handler_1.asyncHandler)(media_controller_1.updateMediaController));
 mediaRouter.delete("/:id", auth_1.authenticate, auth_1.requireAdmin, (0, async_handler_1.asyncHandler)(media_controller_1.deleteMediaController));
+// Real-time view/user count endpoints
+mediaRouter.post("/:id/increment-view", (0, async_handler_1.asyncHandler)(media_controller_1.incrementViewController));
+mediaRouter.post("/:id/decrement-viewer", (0, async_handler_1.asyncHandler)(media_controller_1.decrementViewerController));
+mediaRouter.get("/:id/view-stats", (0, async_handler_1.asyncHandler)(media_controller_1.getViewStatsController));
 exports.default = mediaRouter;

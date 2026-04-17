@@ -1,5 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.incrementViewController = incrementViewController;
+exports.decrementViewerController = decrementViewerController;
+exports.getViewStatsController = getViewStatsController;
 exports.listMediaController = listMediaController;
 exports.getMediaController = getMediaController;
 exports.trendingController = trendingController;
@@ -10,6 +13,19 @@ exports.updateMediaController = updateMediaController;
 exports.deleteMediaController = deleteMediaController;
 const errors_1 = require("../../utils/errors");
 const media_service_1 = require("./media.service");
+// Real-time view/user count controllers
+async function incrementViewController(req, res) {
+    const stats = await (0, media_service_1.incrementView)(String(req.params.id));
+    return res.status(200).json(stats);
+}
+async function decrementViewerController(req, res) {
+    const stats = await (0, media_service_1.decrementViewer)(String(req.params.id));
+    return res.status(200).json(stats);
+}
+async function getViewStatsController(req, res) {
+    const stats = await (0, media_service_1.getViewStats)(String(req.params.id));
+    return res.status(200).json(stats);
+}
 async function listMediaController(req, res) {
     return res.status(200).json(await (0, media_service_1.listMedia)(req.query));
 }

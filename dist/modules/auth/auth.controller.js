@@ -19,7 +19,15 @@ async function emailSignupController(req, res) {
     }
     const user = await (0, auth_service_1.signUpWithEmail)(name, email, password);
     console.log('auth controller signup', user);
-    return res.status(200).json(user);
+    if (user.token) {
+        res.cookie("token", user.token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV !== "development",
+            sameSite: "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+    }
+    return res.status(200).json({ ...user, token: undefined });
 }
 async function emailSigninController(req, res) {
     const { email, password } = req.body || {};
@@ -28,7 +36,15 @@ async function emailSigninController(req, res) {
     }
     const user = await (0, auth_service_1.signInWithEmail)(email, password);
     console.log('auth controller signin', user);
-    return res.status(200).json(user);
+    if (user.token) {
+        res.cookie("token", user.token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV !== "development",
+            sameSite: "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+    }
+    return res.status(200).json({ ...user, token: undefined });
 }
 async function socialSigninController(req, res) {
     const { provider, idToken } = req.body || {};

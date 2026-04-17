@@ -11,6 +11,9 @@ exports.listNewReleases = listNewReleases;
 exports.listRecommendations = listRecommendations;
 exports.updateMedia = updateMedia;
 exports.removeMedia = removeMedia;
+exports.incrementView = incrementView;
+exports.decrementViewer = decrementViewer;
+exports.getViewStats = getViewStats;
 const prisma_1 = __importDefault(require("../../lib/prisma"));
 const errors_1 = require("../../utils/errors");
 const media_1 = require("../../utils/media");
@@ -28,8 +31,12 @@ async function listMedia(query) {
     const search = query.search ? String(query.search) : undefined;
     const genre = query.genre ? String(query.genre) : undefined;
     const platform = query.platform ? String(query.platform) : undefined;
-    const releaseYear = query.releaseYear ? parseIntSafe(query.releaseYear, 0) : undefined;
-    const minPopularity = query.minPopularity ? parseIntSafe(query.minPopularity, 0) : undefined;
+    const releaseYear = query.releaseYear
+        ? parseIntSafe(query.releaseYear, 0)
+        : undefined;
+    const minPopularity = query.minPopularity
+        ? parseIntSafe(query.minPopularity, 0)
+        : undefined;
     const minRating = query.minRating ? parseFloatSafe(query.minRating, 0) : 0;
     const maxRating = query.maxRating ? parseFloatSafe(query.maxRating, 10) : 10;
     const sort = query.sort ? String(query.sort) : "latest";
@@ -48,9 +55,16 @@ async function listMedia(query) {
         ...(releaseYear ? { releaseYear } : {}),
         ...(minPopularity ? { popularity: { gte: minPopularity } } : {}),
     };
-    const orderBy = sort === "latest" ? { createdAt: "desc" } : { popularity: "desc" };
+    const orderBy = sort === "latest"
+        ? { createdAt: "desc" }
+        : { popularity: "desc" };
     const [items, total] = await Promise.all([
-        prisma_1.default.media.findMany({ where, orderBy, skip: (page - 1) * pageSize, take: pageSize }),
+        prisma_1.default.media.findMany({
+            where,
+            orderBy,
+            skip: (page - 1) * pageSize,
+            take: pageSize,
+        }),
         prisma_1.default.media.count({ where }),
     ]);
     const enriched = await (0, media_1.addMediaMetrics)(items);
@@ -65,16 +79,26 @@ async function getMediaById(id) {
     return enriched;
 }
 async function listTrending(limit) {
-    return (0, media_1.addMediaMetrics)(await prisma_1.default.media.findMany({ orderBy: { popularity: "desc" }, take: limit }));
+    return (0, media_1.addMediaMetrics)(await prisma_1.default.media.findMany({
+        orderBy: { popularity: "desc" },
+        take: limit,
+    }));
 }
 async function listFeatured() {
     return (0, media_1.addMediaMetrics)(await prisma_1.default.media.findMany({ orderBy: { releaseYear: "desc" }, take: 6 }));
 }
 async function listNewReleases(limit) {
-    return (0, media_1.addMediaMetrics)(await prisma_1.default.media.findMany({ orderBy: { createdAt: "desc" }, take: limit }));
+    return (0, media_1.addMediaMetrics)(await prisma_1.default.media.findMany({
+        orderBy: { createdAt: "desc" },
+        take: limit,
+    }));
 }
 async function listRecommendations(userId) {
-    const watchlist = await prisma_1.default.watchlistItem.findMany({ where: { userId }, include: { media: true }, take: 20 });
+    const watchlist = await prisma_1.default.watchlistItem.findMany({
+        where: { userId },
+        include: { media: true },
+        take: 20,
+    });
     const topGenres = watchlist.flatMap((w) => w.media.genres).slice(0, 3);
     const items = await prisma_1.default.media.findMany({
         where: topGenres.length ? { genres: { hasSome: topGenres } } : undefined,
@@ -97,4 +121,42 @@ async function removeMedia(id) {
         throw new errors_1.AppError("Media not found", 404, "MEDIA_NOT_FOUND");
     await prisma_1.default.media.delete({ where: { id } });
     return { success: true, message: "Media deleted" };
+}
+// Real-time view/user count logic
+async function incrementView(mediaId) {
+    // Increment both viewCount and currentViewers
+    const updated = await prisma_1.default.media.update({
+        where: { id: mediaId },
+        data: {
+            viewCount: { increment: 1 },
+            currentViewers: { increment: 1 },
+        },
+        select: { viewCount: true, currentViewers: true },
+    });
+    return updated;
+}
+async function decrementViewer(mediaId) {
+    // Decrement currentViewers (not below 0)
+    const media = await prisma_1.default.media.findUnique({
+        where: { id: mediaId },
+        select: { currentViewers: true },
+    });
+    if (!media)
+        throw new errors_1.AppError("Media not found", 404, "MEDIA_NOT_FOUND");
+    const newCount = Math.max(0, media.currentViewers - 1);
+    const updated = await prisma_1.default.media.update({
+        where: { id: mediaId },
+        data: { currentViewers: newCount },
+        select: { viewCount: true, currentViewers: true },
+    });
+    return updated;
+}
+async function getViewStats(mediaId) {
+    const media = await prisma_1.default.media.findUnique({
+        where: { id: mediaId },
+        select: { viewCount: true, currentViewers: true },
+    });
+    if (!media)
+        throw new errors_1.AppError("Media not found", 404, "MEDIA_NOT_FOUND");
+    return media;
 }
