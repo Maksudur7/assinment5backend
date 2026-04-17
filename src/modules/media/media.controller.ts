@@ -1,15 +1,33 @@
 import { Request, Response } from "express";
 import { AppError } from "../../utils/errors";
 import {
-	getMediaById,
-	listFeatured,
-	listMedia,
-	listNewReleases,
-	listRecommendations,
-	listTrending,
-	removeMedia,
-	updateMedia,
+  getMediaById,
+  listFeatured,
+  listMedia,
+  listNewReleases,
+  listRecommendations,
+  listTrending,
+  removeMedia,
+  updateMedia,
+  incrementView,
+  decrementViewer,
+  getViewStats,
 } from "./media.service";
+// Real-time view/user count controllers
+export async function incrementViewController(req: Request, res: Response) {
+	const stats = await incrementView(String(req.params.id));
+	return res.status(200).json(stats);
+}
+
+export async function decrementViewerController(req: Request, res: Response) {
+	const stats = await decrementViewer(String(req.params.id));
+	return res.status(200).json(stats);
+}
+
+export async function getViewStatsController(req: Request, res: Response) {
+	const stats = await getViewStats(String(req.params.id));
+	return res.status(200).json(stats);
+}
 
 export async function listMediaController(req: Request, res: Response) {
 	return res.status(200).json(await listMedia(req.query as Record<string, unknown>));

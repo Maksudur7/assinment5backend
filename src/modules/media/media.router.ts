@@ -10,6 +10,9 @@ import {
 	recommendationsController,
 	trendingController,
 	updateMediaController,
+	incrementViewController,
+	decrementViewerController,
+	getViewStatsController,
 } from "./media.controller";
 
 const mediaRouter = Router();
@@ -22,5 +25,9 @@ mediaRouter.get("/recommendations", authenticate, asyncHandler(recommendationsCo
 mediaRouter.get("/:id", asyncHandler(getMediaController));
 mediaRouter.put("/:id", authenticate, requireAdmin, asyncHandler(updateMediaController));
 mediaRouter.delete("/:id", authenticate, requireAdmin, asyncHandler(deleteMediaController));
+// Real-time view/user count endpoints
+mediaRouter.post("/:id/increment-view", asyncHandler(incrementViewController));
+mediaRouter.post("/:id/decrement-viewer", asyncHandler(decrementViewerController));
+mediaRouter.get("/:id/view-stats", asyncHandler(getViewStatsController));
 
 export default mediaRouter;
