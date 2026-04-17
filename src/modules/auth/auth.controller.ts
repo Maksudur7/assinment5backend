@@ -14,24 +14,39 @@ import {
 } from "./auth.service";
 
 export async function emailSignupController(req: Request, res: Response) {
-	const { name, email, password } = req.body || {};
-	if (!name || !email || !password) {
-		throw new AppError("name, email, password required", 422, "VALIDATION_ERROR");
-	}
-	const user = await signUpWithEmail(name, email, password);
-	console.log('auth controller signup', user);
-	return res.status(200).json(user);
+	 const { name, email, password } = req.body || {};
+	 if (!name || !email || !password) {
+		 throw new AppError("name, email, password required", 422, "VALIDATION_ERROR");
+	 }
+	 const user = await signUpWithEmail(name, email, password);
+	 console.log('auth controller signup', user);
+	 if (user.token) {
+		 res.cookie("token", user.token, {
+			 httpOnly: true,
+			 secure: process.env.NODE_ENV !== "development",
+			 sameSite: "lax",
+			 maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+		 });
+	 }
+	 return res.status(200).json({ ...user, token: undefined });
 }
 
 export async function emailSigninController(req: Request, res: Response) {
-	const { email, password } = req.body || {};
-	if (!email || !password) {
-		throw new AppError("email, password required", 422, "VALIDATION_ERROR");
-	}
-	const user = await signInWithEmail(email, password);
-		console.log('auth controller signin', user);
-
-	return res.status(200).json(user);
+	 const { email, password } = req.body || {};
+	 if (!email || !password) {
+		 throw new AppError("email, password required", 422, "VALIDATION_ERROR");
+	 }
+	 const user = await signInWithEmail(email, password);
+	 console.log('auth controller signin', user);
+	 if (user.token) {
+		 res.cookie("token", user.token, {
+			 httpOnly: true,
+			 secure: process.env.NODE_ENV !== "development",
+			 sameSite: "lax",
+			 maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+		 });
+	 }
+	 return res.status(200).json({ ...user, token: undefined });
 }
 
 export async function socialSigninController(req: Request, res: Response) {
