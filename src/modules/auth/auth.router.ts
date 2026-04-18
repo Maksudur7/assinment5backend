@@ -5,13 +5,15 @@ import {
   emailSigninController,
   emailSignupController,
   forgotPasswordController,
+  getSessionUserController,
   resetPasswordController,
   // sessionController,
-  // sessionsController,
+  sessionsController,
   // refreshTokenController,
   // revokeSessionController,
   // signoutController,
   socialSigninController,
+  
 } from "./auth.controller";
 
 const authRouter = Router();
@@ -37,9 +39,10 @@ authRouter.post("/sign-out", (req, res) => {
   res.json({ success: true });
 });
 
-// Dummy get-session route for frontend compatibility
-authRouter.get("/get-session", (req, res) => {
-  res.status(200).json({ user: null, session: null });
-});
+
+// Dynamic get-session route: controller handles logic
+
+authRouter.get("/get-session", authenticate, asyncHandler(getSessionUserController));
+
 
 export default authRouter;
