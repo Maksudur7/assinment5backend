@@ -9,6 +9,7 @@ declare global {
         email: string;
         role: UserRole;
       };
+      session?: any; // Add session property for middleware use
     }
   }
 }
