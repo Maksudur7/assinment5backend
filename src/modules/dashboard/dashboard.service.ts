@@ -3,25 +3,16 @@ import { secondsToReadable } from "../../utils/time";
 import { addMediaMetrics } from "../../utils/media";
 
 export async function getDashboardStats(userId: string) {
-	const [history, activeSub] = await Promise.all([
+	const [history] = await Promise.all([
 		prisma.watchHistory.findMany({ where: { userId } }),
-		prisma.purchase.findFirst({
-			where: {
-				userId,
-				type: "subscription",
-				status: "active",
-				OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }],
-			},
-			orderBy: { createdAt: "desc" },
-		}),
 	]);
 
 	const totalSeconds = history.reduce((acc, item) => acc + item.progressSeconds, 0);
 
 	return {
 		totalWatchTime: secondsToReadable(totalSeconds),
-		currentPlan: activeSub?.plan || "free",
-		planExpiresAt: activeSub?.expiresAt || null,
+		currentPlan: "free",
+		planExpiresAt: null,
 	};
 }
 
