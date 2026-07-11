@@ -16,6 +16,7 @@ const purcheses_router_1 = __importDefault(require("./modules/purchases/purchese
 const payments_router_1 = __importDefault(require("./modules/payments/payments.router"));
 const admin_router_1 = __importDefault(require("./modules/admin/admin.router"));
 const dashboard_router_1 = __importDefault(require("./modules/dashboard/dashboard.router"));
+const contact_routes_1 = __importDefault(require("./modules/contact/contact.routes"));
 const error_handler_1 = require("./middleware/error-handler");
 const rate_limit_1 = require("./middleware/rate-limit");
 const app = (0, express_1.default)();
@@ -57,6 +58,7 @@ app.use("/api/purchases", purcheses_router_1.default);
 app.use("/api/payments", payments_router_1.default);
 app.use("/api/admin", admin_router_1.default);
 app.use("/api/dashboard", dashboard_router_1.default);
+app.use("/api/contact", contact_routes_1.default);
 app.use(error_handler_1.notFoundHandler);
 app.use(error_handler_1.errorHandler);
 exports.default = app;

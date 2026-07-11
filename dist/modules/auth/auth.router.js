@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const async_handler_1 = require("../../utils/async-handler");
+const auth_1 = require("../../middleware/auth");
 const auth_controller_1 = require("./auth.controller");
 const authRouter = (0, express_1.Router)();
 authRouter.post("/email/signup", (0, async_handler_1.asyncHandler)(auth_controller_1.emailSignupController));
@@ -22,8 +23,6 @@ authRouter.post("/sign-out", (req, res) => {
     // Optionally: req.session?.destroy(), res.clearCookie(), etc.
     res.json({ success: true });
 });
-// Dummy get-session route for frontend compatibility
-authRouter.get("/get-session", (req, res) => {
-    res.status(200).json({ user: null, session: null });
-});
+// Dynamic get-session route: controller handles logic
+authRouter.get("/get-session", auth_1.authenticate, (0, async_handler_1.asyncHandler)(auth_controller_1.getSessionUserController));
 exports.default = authRouter;

@@ -1,10 +1,13 @@
 "use strict";
+// Controller: get user info by userId param or current user
+// Get session and user info for authenticated requests
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.emailSignupController = emailSignupController;
 exports.emailSigninController = emailSigninController;
 exports.socialSigninController = socialSigninController;
 exports.forgotPasswordController = forgotPasswordController;
 exports.resetPasswordController = resetPasswordController;
+exports.getSessionUserController = getSessionUserController;
 exports.sessionController = sessionController;
 exports.signoutController = signoutController;
 exports.sessionsController = sessionsController;
@@ -18,7 +21,7 @@ async function emailSignupController(req, res) {
         throw new errors_1.AppError("name, email, password required", 422, "VALIDATION_ERROR");
     }
     const user = await (0, auth_service_1.signUpWithEmail)(name, email, password);
-    console.log('auth controller signup', user);
+    console.log("auth controller signup", user);
     if (user.token) {
         res.cookie("token", user.token, {
             httpOnly: true,
@@ -27,7 +30,7 @@ async function emailSignupController(req, res) {
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
     }
-    return res.status(200).json({ ...user, token: undefined });
+    return res.status(200).json({ ...user, token: user.token });
 }
 async function emailSigninController(req, res) {
     const { email, password } = req.body || {};
@@ -35,7 +38,7 @@ async function emailSigninController(req, res) {
         throw new errors_1.AppError("email, password required", 422, "VALIDATION_ERROR");
     }
     const user = await (0, auth_service_1.signInWithEmail)(email, password);
-    console.log('auth controller signin', user);
+    console.log("auth controller signin", user);
     if (user.token) {
         res.cookie("token", user.token, {
             httpOnly: true,
@@ -44,7 +47,7 @@ async function emailSigninController(req, res) {
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
     }
-    return res.status(200).json({ ...user, token: undefined });
+    return res.status(200).json({ ...user, token: user.token });
 }
 async function socialSigninController(req, res) {
     const { provider, idToken } = req.body || {};
@@ -52,8 +55,8 @@ async function socialSigninController(req, res) {
         throw new errors_1.AppError("provider, idToken required", 422, "VALIDATION_ERROR");
     }
     const user = await (0, auth_service_1.socialSignIn)(provider, idToken);
-    console.log('auth controller social signin', user);
-    return res.status(200).json(user);
+    console.log("auth controller social signin", user);
+    return res.status(200).json({ ...user, token: user.token });
 }
 async function forgotPasswordController(req, res) {
     const { email } = req.body || {};
@@ -67,6 +70,14 @@ async function resetPasswordController(req, res) {
         throw new errors_1.AppError("token and newPassword required", 422, "VALIDATION_ERROR");
     }
     return res.status(200).json(await (0, auth_service_1.resetPassword)(token, newPassword));
+}
+async function getSessionUserController(req, res) {
+    // userId from query, params, or current user
+    const userId = req.params.userId || req.query.userId || req.user?.id;
+    if (!userId)
+        throw new errors_1.AppError("userId required", 400, "VALIDATION_ERROR");
+    const result = await (0, auth_service_1.getSessionUser)(userId);
+    return res.status(200).json(result);
 }
 async function sessionController(req, res) {
     const session = await (0, auth_service_1.getCurrentSession)(new Headers(req.headers));
@@ -93,11 +104,15 @@ async function revokeSessionController(req, res) {
     const { token } = req.body || {};
     if (!token)
         throw new errors_1.AppError("token required", 422, "VALIDATION_ERROR");
-    return res.status(200).json(await (0, auth_service_1.revokeCurrentSession)(new Headers(req.headers), String(token)));
+    return res
+        .status(200)
+        .json(await (0, auth_service_1.revokeCurrentSession)(new Headers(req.headers), String(token)));
 }
 async function refreshTokenController(req, res) {
     const { providerId, accountId, userId } = req.body || {};
     if (!providerId)
         throw new errors_1.AppError("providerId required", 422, "VALIDATION_ERROR");
-    return res.status(200).json(await (0, auth_service_1.refreshProviderToken)(new Headers(req.headers), String(providerId), accountId ? String(accountId) : undefined, userId ? String(userId) : undefined));
+    return res
+        .status(200)
+        .json(await (0, auth_service_1.refreshProviderToken)(new Headers(req.headers), String(providerId), accountId ? String(accountId) : undefined, userId ? String(userId) : undefined));
 }

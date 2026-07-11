@@ -27,6 +27,16 @@ async function authenticate(req, _res, next) {
             email: session.user.email,
             role: session.user.role,
         };
+        // Attach session info for controller use
+        req.session = {
+            id: session.id,
+            expiresAt: session.expiresAt,
+            createdAt: session.createdAt,
+            updatedAt: session.updatedAt,
+            ipAddress: session.ipAddress,
+            userAgent: session.userAgent,
+            token: session.token,
+        };
         return next();
     }
     catch (error) {
