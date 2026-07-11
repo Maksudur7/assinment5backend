@@ -13,6 +13,7 @@ import watchlistRouter from "./modules/watchlist/watchlist.router";
 import adminRouter from "./modules/admin/admin.router";
 import dashboardRouter from "./modules/dashboard/dashboard.router";
 import contactRouter from "./modules/contact/contact.routes";
+import landingRouter from "./modules/landing/landing.routes";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { rateLimiter } from "./middleware/rate-limit";
 
@@ -62,6 +63,7 @@ app.use("/api/watchlist", watchlistRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/dashboard", dashboardRouter);
 app.use("/api/contact", contactRouter);
+app.use("/api/landing", landingRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
