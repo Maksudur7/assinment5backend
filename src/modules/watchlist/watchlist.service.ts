@@ -16,6 +16,8 @@ export async function getWatchlist(userId: string) {
 		id: item.media.id,
 		title: item.media.title,
 		poster: item.media.poster,
+		genres: item.media.genres,
+		releaseYear: item.media.releaseYear,
 		avgRating: byId.get(item.media.id)?.avgRating || 0,
 		addedAt: item.addedAt,
 	}));
