@@ -13,6 +13,7 @@ import purchasesRouter from "./modules/purchases/purcheses.router";
 import paymentsRouter from "./modules/payments/payments.router";
 import adminRouter from "./modules/admin/admin.router";
 import dashboardRouter from "./modules/dashboard/dashboard.router";
+import contactRouter from "./modules/contact/contact.routes";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { rateLimiter } from "./middleware/rate-limit";
 
@@ -63,6 +64,7 @@ app.use("/api/purchases", purchasesRouter);
 app.use("/api/payments", paymentsRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/dashboard", dashboardRouter);
+app.use("/api/contact", contactRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
