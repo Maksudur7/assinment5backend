@@ -49,15 +49,25 @@ export async function listMedia(query: Record<string, unknown>) {
       ? { createdAt: "desc" as const }
       : { popularity: "desc" as const };
 
-  const [items, total] = await Promise.all([
-    prisma.media.findMany({
-      where,
-      orderBy,
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-    prisma.media.count({ where }),
-  ]);
+  let items: any[] = [];
+  let total = 0;
+
+  try {
+    const [fetchedItems, fetchedTotal] = await Promise.all([
+      prisma.media.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.media.count({ where }),
+    ]);
+    items = fetchedItems;
+    total = fetchedTotal;
+  } catch (error) {
+    console.error("Prisma error in listMedia:", error);
+    return { items: [], total: 0, page, pageSize };
+  }
 
   const enriched = await addMediaMetrics(items);
   const filtered = enriched.filter(
