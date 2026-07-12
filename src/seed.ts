@@ -42,13 +42,13 @@ async function main() {
   console.log("✅ Admin user created/updated (admin@ngv.local)");
 
   // Seed User
-  const userPassword = await bcrypt.hash("user12345", 10);
+  const userPassword = await bcrypt.hash("mashud1215", 10);
   const user = await prisma.user.upsert({
-    where: { email: "user@ngv.local" },
+    where: { email: "maksudurr538@gmail.com" },
     update: { role: "user", passwordHash: userPassword },
     create: {
       name: "Demo User",
-      email: "user@ngv.local",
+      email: "maksudurr538@gmail.com",
       passwordHash: userPassword,
       role: "user",
       emailVerified: true
@@ -74,7 +74,7 @@ async function main() {
       data: { password: userPassword }
     });
   }
-  console.log("✅ Standard user created/updated (user@ngv.local)");
+  console.log("✅ Standard user created/updated (maksudurr538@gmail.com)");
 
   console.log("🎉 Seeding complete! You can now login with demo credentials.");
 }
