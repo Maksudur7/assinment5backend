@@ -1,6 +1,7 @@
 
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 
 import { env } from "./config/env";
 import authRouter from "./modules/auth/auth.router";
@@ -42,6 +43,7 @@ const corsOptions = {
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
 };
 
+app.use(helmet());
 app.use(cors(corsOptions));
 app.use(express.json());
 

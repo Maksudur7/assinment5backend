@@ -179,3 +179,26 @@ export async function getViewStats(mediaId: string) {
   if (!media) throw new AppError("Media not found", 404, "MEDIA_NOT_FOUND");
   return media;
 }
+
+export async function searchMedia(q: string) {
+  const items = await prisma.media.findMany({
+    where: {
+      OR: [
+        { title: { contains: q, mode: "insensitive" } },
+        { synopsis: { contains: q, mode: "insensitive" } },
+        { director: { contains: q, mode: "insensitive" } },
+        { cast: { hasSome: [q] } },
+        { genres: { hasSome: [q] } },
+      ],
+    },
+    orderBy: { popularity: "desc" },
+    take: 20,
+  });
+  return addMediaMetrics(items);
+}
+
+export async function createMedia(payload: Record<string, unknown>) {
+  const media = await prisma.media.create({ data: payload as any });
+  const [enriched] = await addMediaMetrics([media]);
+  return enriched;
+}
