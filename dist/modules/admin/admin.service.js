@@ -33,21 +33,15 @@ async function listPendingComments() {
     }
 }
 async function getAdminOverview() {
-    const [totalUsers, totalMedia, purchases, pendingReviews, activeSubscriptions,] = await Promise.all([
+    const [totalUsers, totalMedia, pendingReviews,] = await Promise.all([
         prisma_1.default.user.count(),
         prisma_1.default.media.count(),
-        prisma_1.default.purchase.findMany({ where: { status: "active" } }),
         prisma_1.default.review.count({ where: { moderationStatus: "PENDING" } }),
-        prisma_1.default.purchase.count({
-            where: { type: "subscription", status: "active" },
-        }),
     ]);
     return {
         totalUsers,
         totalMedia,
-        totalRevenue: purchases.reduce((sum, p) => sum + p.amount, 0) / 100,
         pendingReviews,
-        activeSubscriptions,
     };
 }
 async function listPendingReviews() {
@@ -93,7 +87,6 @@ async function createMedia(payload) {
         "director",
         "cast",
         "platforms",
-        "pricing",
         "streamingUrl",
         "poster",
         "duration",

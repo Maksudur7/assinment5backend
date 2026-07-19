@@ -46,6 +46,8 @@ export async function getAuth() {
           };
         }
 
+        console.log("🔴 [DEBUG] socialProviders loaded:", Object.keys(socialProviders));
+
         return betterAuth({
           secret: env.betterAuthSecret,
           baseURL: env.betterAuthUrl,

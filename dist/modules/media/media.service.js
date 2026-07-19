@@ -14,6 +14,8 @@ exports.removeMedia = removeMedia;
 exports.incrementView = incrementView;
 exports.decrementViewer = decrementViewer;
 exports.getViewStats = getViewStats;
+exports.searchMedia = searchMedia;
+exports.createMedia = createMedia;
 const prisma_1 = __importDefault(require("../../lib/prisma"));
 const errors_1 = require("../../utils/errors");
 const media_1 = require("../../utils/media");
@@ -58,15 +60,25 @@ async function listMedia(query) {
     const orderBy = sort === "latest"
         ? { createdAt: "desc" }
         : { popularity: "desc" };
-    const [items, total] = await Promise.all([
-        prisma_1.default.media.findMany({
-            where,
-            orderBy,
-            skip: (page - 1) * pageSize,
-            take: pageSize,
-        }),
-        prisma_1.default.media.count({ where }),
-    ]);
+    let items = [];
+    let total = 0;
+    try {
+        const [fetchedItems, fetchedTotal] = await Promise.all([
+            prisma_1.default.media.findMany({
+                where,
+                orderBy,
+                skip: (page - 1) * pageSize,
+                take: pageSize,
+            }),
+            prisma_1.default.media.count({ where }),
+        ]);
+        items = fetchedItems;
+        total = fetchedTotal;
+    }
+    catch (error) {
+        console.error("Prisma error in listMedia:", error);
+        return { items: [], total: 0, page, pageSize };
+    }
     const enriched = await (0, media_1.addMediaMetrics)(items);
     const filtered = enriched.filter((item) => item.avgRating >= minRating && item.avgRating <= maxRating);
     return { items: filtered, total: filtered.length || total, page, pageSize };
@@ -159,4 +171,25 @@ async function getViewStats(mediaId) {
     if (!media)
         throw new errors_1.AppError("Media not found", 404, "MEDIA_NOT_FOUND");
     return media;
+}
+async function searchMedia(q) {
+    const items = await prisma_1.default.media.findMany({
+        where: {
+            OR: [
+                { title: { contains: q, mode: "insensitive" } },
+                { synopsis: { contains: q, mode: "insensitive" } },
+                { director: { contains: q, mode: "insensitive" } },
+                { cast: { hasSome: [q] } },
+                { genres: { hasSome: [q] } },
+            ],
+        },
+        orderBy: { popularity: "desc" },
+        take: 20,
+    });
+    return (0, media_1.addMediaMetrics)(items);
+}
+async function createMedia(payload) {
+    const media = await prisma_1.default.media.create({ data: payload });
+    const [enriched] = await (0, media_1.addMediaMetrics)([media]);
+    return enriched;
 }

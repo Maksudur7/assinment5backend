@@ -9,23 +9,14 @@ const prisma_1 = __importDefault(require("../../lib/prisma"));
 const time_1 = require("../../utils/time");
 const media_1 = require("../../utils/media");
 async function getDashboardStats(userId) {
-    const [history, activeSub] = await Promise.all([
+    const [history] = await Promise.all([
         prisma_1.default.watchHistory.findMany({ where: { userId } }),
-        prisma_1.default.purchase.findFirst({
-            where: {
-                userId,
-                type: "subscription",
-                status: "active",
-                OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }],
-            },
-            orderBy: { createdAt: "desc" },
-        }),
     ]);
     const totalSeconds = history.reduce((acc, item) => acc + item.progressSeconds, 0);
     return {
         totalWatchTime: (0, time_1.secondsToReadable)(totalSeconds),
-        currentPlan: activeSub?.plan || "free",
-        planExpiresAt: activeSub?.expiresAt || null,
+        currentPlan: "free",
+        planExpiresAt: null,
     };
 }
 async function getFavorites(userId) {

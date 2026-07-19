@@ -45,7 +45,6 @@ const corsOptions = {
 
 app.use(helmet());
 app.use(cors(corsOptions));
-app.use(express.json());
 
 app.use(rateLimiter({ windowMs: 60 * 60 * 1000, max: 1000 }));
 app.use("/api/auth", rateLimiter({ windowMs: 60 * 1000, max: 10 }));
@@ -54,6 +53,30 @@ app.use("/api/auth", rateLimiter({ windowMs: 60 * 1000, max: 10 }));
 app.get("/health", (_req, res) => {
   return res.status(200).json({ ok: true });
 });
+
+import { getAuth } from "./lib/better-auth";
+import { toNodeHandler } from "better-auth/node";
+
+// Better Auth handler MUST be before express.json() so it can read the raw request stream
+app.all(/^\/api\/auth\/(.*)/, async (req, res, next) => {
+  try {
+    const auth = await getAuth();
+    const handler = toNodeHandler(auth);
+    
+    // We pass req and res to better-auth
+    await handler(req, res);
+    
+    // If better-auth didn't handle it, pass to custom router
+    if (!res.headersSent) {
+      next();
+    }
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Now apply express.json() for all other custom routes
+app.use(express.json());
 
 app.use("/api/auth", authRouter);
 app.use("/api/media", mediaRouter);
