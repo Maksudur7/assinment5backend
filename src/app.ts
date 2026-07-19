@@ -55,12 +55,15 @@ app.get("/health", (_req, res) => {
 });
 
 import { getAuth } from "./lib/better-auth";
-import { toNodeHandler } from "better-auth/node";
+
+// Native dynamic import to bypass CommonJS require() conversion by Vercel/TypeScript
+const nativeImport = new Function("specifier", "return import(specifier);");
 
 // Better Auth handler MUST be before express.json() so it can read the raw request stream
 app.all(/^\/api\/auth\/(.*)/, async (req, res, next) => {
   try {
     const auth = await getAuth();
+    const { toNodeHandler } = await nativeImport("better-auth/node");
     const handler = toNodeHandler(auth);
     
     // We pass req and res to better-auth
