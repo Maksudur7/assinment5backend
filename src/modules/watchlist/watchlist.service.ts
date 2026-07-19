@@ -16,6 +16,8 @@ export async function getWatchlist(userId: string) {
 		id: item.media.id,
 		title: item.media.title,
 		poster: item.media.poster,
+		genres: item.media.genres,
+		releaseYear: item.media.releaseYear,
 		avgRating: byId.get(item.media.id)?.avgRating || 0,
 		addedAt: item.addedAt,
 	}));
@@ -39,4 +41,42 @@ export async function toggleWatchlist(userId: string, mediaId: string) {
 export async function removeFromWatchlist(userId: string, mediaId: string) {
 	await prisma.watchlistItem.deleteMany({ where: { userId, mediaId } });
 	return { success: true };
+}
+
+export async function getHistory(userId: string) {
+	const items = await prisma.watchHistory.findMany({
+		where: { userId },
+		include: { media: true },
+		orderBy: { watchedAt: "desc" },
+	});
+
+	const medias = await addMediaMetrics(items.map((item) => item.media));
+	const byId = new Map(medias.map((m) => [m.id, m]));
+
+	return items.map((item) => ({
+		id: item.media.id,
+		title: item.media.title,
+		poster: item.media.poster,
+		genres: item.media.genres,
+		releaseYear: item.media.releaseYear,
+		avgRating: byId.get(item.media.id)?.avgRating || 0,
+		watchedAt: item.watchedAt,
+	}));
+}
+
+export async function addToHistory(userId: string, mediaId: string) {
+	// Upsert to update watchedAt if already exists
+	const existing = await prisma.watchHistory.findFirst({ where: { userId, mediaId } });
+	if (existing) {
+		await prisma.watchHistory.update({
+			where: { id: existing.id },
+			data: { watchedAt: new Date() }
+		});
+		return { success: true, updated: true };
+	}
+	
+	await prisma.watchHistory.create({
+		data: { userId, mediaId, watchedAt: new Date() }
+	});
+	return { success: true, added: true };
 }

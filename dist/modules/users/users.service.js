@@ -45,7 +45,6 @@ async function listWatchHistory(userId, limit, offset) {
         title: item.media.title,
         poster: item.media.poster,
         watchedAt: item.watchedAt,
-        progressSeconds: item.progressSeconds,
     }));
 }
 async function updateWatchProgress(userId, mediaId, progressSeconds) {
@@ -57,6 +56,15 @@ async function updateWatchProgress(userId, mediaId, progressSeconds) {
         create: { userId, mediaId, progressSeconds },
         update: { progressSeconds },
     });
-    await prisma_1.default.watchHistory.create({ data: { userId, mediaId, progressSeconds } });
+    const existingHistory = await prisma_1.default.watchHistory.findFirst({ where: { userId, mediaId } });
+    if (existingHistory) {
+        await prisma_1.default.watchHistory.update({
+            where: { id: existingHistory.id },
+            data: { watchedAt: new Date() }
+        });
+    }
+    else {
+        await prisma_1.default.watchHistory.create({ data: { userId, mediaId, watchedAt: new Date() } });
+    }
     return { mediaId, progressSeconds: progress.progressSeconds, updatedAt: progress.updatedAt };
 }

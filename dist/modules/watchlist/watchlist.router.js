@@ -8,4 +8,6 @@ const watchlistRouter = (0, express_1.Router)();
 watchlistRouter.get("/", auth_1.authenticate, (0, async_handler_1.asyncHandler)(watchlist_controller_1.getWatchlistController));
 watchlistRouter.post("/:mediaId", auth_1.authenticate, (0, async_handler_1.asyncHandler)(watchlist_controller_1.toggleWatchlistController));
 watchlistRouter.delete("/:mediaId", auth_1.authenticate, (0, async_handler_1.asyncHandler)(watchlist_controller_1.deleteWatchlistController));
+watchlistRouter.get("/history", auth_1.authenticate, (0, async_handler_1.asyncHandler)(watchlist_controller_1.getHistoryController));
+watchlistRouter.post("/history/:mediaId", auth_1.authenticate, (0, async_handler_1.asyncHandler)(watchlist_controller_1.addToHistoryController));
 exports.default = watchlistRouter;

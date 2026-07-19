@@ -49,15 +49,25 @@ export async function listMedia(query: Record<string, unknown>) {
       ? { createdAt: "desc" as const }
       : { popularity: "desc" as const };
 
-  const [items, total] = await Promise.all([
-    prisma.media.findMany({
-      where,
-      orderBy,
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    }),
-    prisma.media.count({ where }),
-  ]);
+  let items: any[] = [];
+  let total = 0;
+
+  try {
+    const [fetchedItems, fetchedTotal] = await Promise.all([
+      prisma.media.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.media.count({ where }),
+    ]);
+    items = fetchedItems;
+    total = fetchedTotal;
+  } catch (error) {
+    console.error("Prisma error in listMedia:", error);
+    return { items: [], total: 0, page, pageSize };
+  }
 
   const enriched = await addMediaMetrics(items);
   const filtered = enriched.filter(
@@ -168,4 +178,27 @@ export async function getViewStats(mediaId: string) {
   });
   if (!media) throw new AppError("Media not found", 404, "MEDIA_NOT_FOUND");
   return media;
+}
+
+export async function searchMedia(q: string) {
+  const items = await prisma.media.findMany({
+    where: {
+      OR: [
+        { title: { contains: q, mode: "insensitive" } },
+        { synopsis: { contains: q, mode: "insensitive" } },
+        { director: { contains: q, mode: "insensitive" } },
+        { cast: { hasSome: [q] } },
+        { genres: { hasSome: [q] } },
+      ],
+    },
+    orderBy: { popularity: "desc" },
+    take: 20,
+  });
+  return addMediaMetrics(items);
+}
+
+export async function createMedia(payload: Record<string, unknown>) {
+  const media = await prisma.media.create({ data: payload as any });
+  const [enriched] = await addMediaMetrics([media]);
+  return enriched;
 }

@@ -39,7 +39,6 @@ export async function listWatchHistory(userId: string, limit: number, offset: nu
 		title: item.media.title,
 		poster: item.media.poster,
 		watchedAt: item.watchedAt,
-		progressSeconds: item.progressSeconds,
 	}));
 }
 
@@ -53,7 +52,15 @@ export async function updateWatchProgress(userId: string, mediaId: string, progr
 		update: { progressSeconds },
 	});
 
-	await prisma.watchHistory.create({ data: { userId, mediaId, progressSeconds } });
+	const existingHistory = await prisma.watchHistory.findFirst({ where: { userId, mediaId } });
+	if (existingHistory) {
+		await prisma.watchHistory.update({
+			where: { id: existingHistory.id },
+			data: { watchedAt: new Date() }
+		});
+	} else {
+		await prisma.watchHistory.create({ data: { userId, mediaId, watchedAt: new Date() } });
+	}
 
 	return { mediaId, progressSeconds: progress.progressSeconds, updatedAt: progress.updatedAt };
 }

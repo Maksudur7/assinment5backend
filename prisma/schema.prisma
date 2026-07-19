@@ -8,7 +8,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
 }
 
 enum UserRole {
@@ -16,64 +16,7 @@ enum UserRole {
   admin
 }
 
-enum PricingType {
-  free
-  premium
-}
 
-enum PurchaseType {
-  rent
-  buy
-  subscription
-}
-
-enum PurchaseProvider {
-  stripe
-  paypal
-  razorpay
-}
-
-enum PaymentGatewayProvider {
-  stripe
-  sslcommerz
-  portwallet
-  bkash
-  nagad
-  rocket
-}
-
-enum PurchaseMethod {
-  card
-  wallet
-}
-
-enum PaymentMethodType {
-  visa
-  debit_card
-  credit_card
-  bkash
-  nagad
-  rocket
-}
-
-enum PaymentCheckoutStatus {
-  pending
-  processing
-  paid
-  failed
-}
-
-enum PurchaseStatus {
-  active
-  expired
-  revoked
-  refunded
-}
-
-enum PurchasePlan {
-  monthly
-  yearly
-}
 
 enum ModerationStatus {
   PENDING
@@ -101,8 +44,7 @@ model User {
   watchlistItems   WatchlistItem[]
   watchProgresses  WatchProgress[]
   watchHistories   WatchHistory[]
-  purchases        Purchase[]
-  paymentCheckouts PaymentCheckout[]
+
   resetTokens      PasswordResetToken[]
   sessions         Session[]
   accounts         Account[]
@@ -164,7 +106,7 @@ model Media {
   director     String
   cast         String[]
   platforms    String[]
-  pricing      PricingType @default(free)
+
   streamingUrl String      @unique
   poster       String
   duration     String
@@ -178,7 +120,7 @@ model Media {
   watchlistItems  WatchlistItem[]
   watchProgresses WatchProgress[]
   watchHistories  WatchHistory[]
-  purchases       Purchase[]
+
 
   @@index([releaseYear])
   @@index([createdAt])
@@ -270,31 +212,6 @@ model WatchHistory {
   @@index([userId, watchedAt])
 }
 
-model Purchase {
-  id                    String           @id @default(uuid())
-  userId                String
-  mediaId               String?
-  type                  PurchaseType
-  plan                  PurchasePlan?
-  provider              PurchaseProvider
-  method                PurchaseMethod
-  amount                Int
-  cardLast4             String?
-  checkoutId            String?
-  gatewayTransactionId  String?
-  sendConfirmationEmail Boolean          @default(false)
-  expiresAt             DateTime?
-  status                PurchaseStatus   @default(active)
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
-
-  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  media Media? @relation(fields: [mediaId], references: [id], onDelete: SetNull)
-
-  @@index([userId, createdAt])
-  @@index([status])
-}
-
 model PasswordResetToken {
   id        String    @id @default(uuid())
   userId    String
@@ -308,57 +225,7 @@ model PasswordResetToken {
   @@index([userId, expiresAt])
 }
 
-model PaymentCheckout {
-  id                 String                 @id @default(uuid())
-  checkoutId         String                 @unique
-  transactionId      String                 @unique
-  userId             String
-  type               PurchaseType           @default(subscription)
-  plan               PurchasePlan?
-  amount             Int
-  currency           String                 @default("USD")
-  provider           PaymentGatewayProvider
-  method             PurchaseMethod
-  paymentMethodType  PaymentMethodType
-  cardLast4          String?
-  cardToken          String?
-  walletProvider     String?
-  walletNumberMasked String?
-  emailReceipt       Boolean                @default(false)
-  idempotencyKey     String?
-  status             PaymentCheckoutStatus  @default(pending)
-  paymentUrl         String?
-  gatewayRef         String?
-  failedReason       String?
-  paidAt             DateTime?
-  metadata           Json?
-  createdAt          DateTime               @default(now())
-  updatedAt          DateTime               @updatedAt
 
-  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  auditLogs PaymentAuditLog[]
-
-  @@unique([userId, idempotencyKey])
-  @@index([userId, createdAt])
-  @@index([status])
-}
-
-model PaymentAuditLog {
-  id            String   @id @default(uuid())
-  checkoutId    String?
-  transactionId String?
-  source        String
-  event         String
-  requestBody   Json?
-  responseBody  Json?
-  responseCode  Int?
-  createdAt     DateTime @default(now())
-
-  checkout PaymentCheckout? @relation(fields: [checkoutId], references: [checkoutId], onDelete: SetNull)
-
-  @@index([checkoutId, createdAt])
-  @@index([transactionId, createdAt])
-}
 
 model Category {
   id        String   @id @default(uuid())
@@ -375,4 +242,28 @@ model ContactMessage {
   subject   String
   message   String
   createdAt DateTime @default(now())
+}
+
+model LandingHighlight {
+  id        String   @id @default(uuid())
+  title     String
+  text      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LandingTestimonial {
+  id        String   @id @default(uuid())
+  name      String
+  quote     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LandingFaq {
+  id        String   @id @default(uuid())
+  question  String
+  answer    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

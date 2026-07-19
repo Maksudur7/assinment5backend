@@ -29,8 +29,8 @@ export async function listReviews(mediaId: string, limit: number, offset: number
 }
 
 export async function createReview(mediaId: string, userId: string, payload: { rating: number; content: string; tags?: string[]; spoiler?: boolean }) {
-  if (payload.rating < 1 || payload.rating > 5) {
-    throw new AppError("rating must be between 1 and 5", 422, "VALIDATION_ERROR");
+  if (payload.rating < 1 || payload.rating > 10) {
+    throw new AppError("rating must be between 1 and 10", 422, "VALIDATION_ERROR");
   }
 
   const media = await prisma.media.findUnique({ where: { id: mediaId } });
@@ -44,8 +44,8 @@ export async function createReview(mediaId: string, userId: string, payload: { r
       content: payload.content,
       tags: payload.tags || [],
       spoiler: payload.spoiler || false,
-      isPublished: false,
-      moderationStatus: "PENDING",
+      isPublished: true,
+      moderationStatus: "APPROVED",
     },
     include: { user: { select: { name: true } }, likes: true },
   });
@@ -71,6 +71,9 @@ export async function updateReview(reviewId: string, userId: string, payload: { 
   if (review.userId !== userId) throw new AppError("Forbidden", 403, "FORBIDDEN");
   if (review.isPublished || review.moderationStatus !== "PENDING") {
     throw new AppError("Only unpublished pending reviews can be edited", 400, "VALIDATION_ERROR");
+  }
+  if (payload.rating !== undefined && (payload.rating < 1 || payload.rating > 10)) {
+    throw new AppError("rating must be between 1 and 10", 422, "VALIDATION_ERROR");
   }
 
   const updated = await prisma.review.update({

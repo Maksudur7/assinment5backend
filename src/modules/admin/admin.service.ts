@@ -26,25 +26,17 @@ export async function getAdminOverview() {
   const [
     totalUsers,
     totalMedia,
-    purchases,
     pendingReviews,
-    activeSubscriptions,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.media.count(),
-    prisma.purchase.findMany({ where: { status: "active" } }),
     prisma.review.count({ where: { moderationStatus: "PENDING" } }),
-    prisma.purchase.count({
-      where: { type: "subscription", status: "active" },
-    }),
   ]);
 
   return {
     totalUsers,
     totalMedia,
-    totalRevenue: purchases.reduce((sum, p) => sum + p.amount, 0) / 100,
     pendingReviews,
-    activeSubscriptions,
   };
 }
 
@@ -92,7 +84,6 @@ export async function createMedia(payload: any) {
     "director",
     "cast",
     "platforms",
-    "pricing",
     "streamingUrl",
     "poster",
     "duration",

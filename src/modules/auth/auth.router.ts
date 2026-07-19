@@ -1,48 +1,40 @@
 import { Router } from "express";
 import { asyncHandler } from "../../utils/async-handler";
 import { authenticate } from "../../middleware/auth";
+import { toNodeHandler } from "better-auth/node";
+import { getAuth } from "../../lib/better-auth";
 import {
   emailSigninController,
   emailSignupController,
-  forgotPasswordController,
   getSessionUserController,
-  resetPasswordController,
-  // sessionController,
+  sessionController,
   sessionsController,
-  // refreshTokenController,
-  // revokeSessionController,
-  // signoutController,
-  socialSigninController,
-  
+  signoutController,
+  revokeSessionController,
+  revokeAllSessionsController,
 } from "./auth.controller";
 
 const authRouter = Router();
 
+// ── Registration & Login ────────────────────────────────────────────────────
 authRouter.post("/email/signup", asyncHandler(emailSignupController));
-authRouter.post("/sign-up/email", asyncHandler(emailSignupController));
+authRouter.post("/sign-up/email", asyncHandler(emailSignupController));  // Better Auth compat alias
+
 authRouter.post("/email/signin", asyncHandler(emailSigninController));
-authRouter.post("/social/signin", asyncHandler(socialSigninController));
-authRouter.post("/forgot-password", asyncHandler(forgotPasswordController));
-authRouter.post("/reset-password", asyncHandler(resetPasswordController));
-// authRouter.get("/session", authenticate, asyncHandler(sessionController));
-// authRouter.get("/sessions", authenticate, asyncHandler(sessionsController));
-// authRouter.post("/sessions/revoke", authenticate, asyncHandler(revokeSessionController));
-// authRouter.post("/refresh-token", authenticate, asyncHandler(refreshTokenController));
-// authRouter.post("/signout", asyncHandler(signoutController));
-authRouter.post("/sign-in/email", asyncHandler(emailSigninController));
-authRouter.post("/sign-in/social", asyncHandler(socialSigninController));
+authRouter.post("/sign-in/email", asyncHandler(emailSigninController));   // Better Auth compat alias
 
+// ── Sign Out ────────────────────────────────────────────────────────────────
+authRouter.post("/sign-out", asyncHandler(signoutController));
+authRouter.post("/signout", asyncHandler(signoutController));
 
-// Dummy sign-out route for frontend compatibility
-authRouter.post("/sign-out", (req, res) => {
-  // Optionally: req.session?.destroy(), res.clearCookie(), etc.
-  res.json({ success: true });
-});
-
-
-// Dynamic get-session route: controller handles logic
-
+// ── Session Management (requires auth) ─────────────────────────────────────
+authRouter.get("/session", authenticate, asyncHandler(sessionController));
 authRouter.get("/get-session", authenticate, asyncHandler(getSessionUserController));
+authRouter.get("/sessions", authenticate, asyncHandler(sessionsController));
+authRouter.post("/sessions/revoke", authenticate, asyncHandler(revokeSessionController));
+authRouter.post("/sessions/revoke-all", authenticate, asyncHandler(revokeAllSessionsController));
 
+// ── Profile User by ID (requires auth) ─────────────────────────────────────
+authRouter.get("/user/:userId", authenticate, asyncHandler(getSessionUserController));
 
 export default authRouter;
