@@ -31,22 +31,28 @@ export async function getAuth() {
           socialProviders.google = {
             clientId: env.googleClientId,
             clientSecret: env.googleClientSecret,
-            redirectURI: `${env.betterAuthUrl}/callback/google`,
+            redirectURI: `${env.appUrl}/api/auth/callback/google`,
           };
         }
         if (env.facebookClientId && env.facebookClientSecret) {
           socialProviders.facebook = {
             clientId: env.facebookClientId,
             clientSecret: env.facebookClientSecret,
-            redirectURI: `${env.betterAuthUrl}/callback/facebook`,
+            redirectURI: `${env.appUrl}/api/auth/callback/facebook`,
           };
         }
         return betterAuth({
           secret: env.betterAuthSecret,
-          baseURL: env.betterAuthUrl,
+          baseURL: env.appUrl, // Root backend URL (https://ngv-backend.vercel.app)
           database: prismaAdapter(prisma, {
             provider: "postgresql",
           }),
+          advanced: {
+            defaultCookieAttributes: {
+              sameSite: "none",
+              secure: true,
+            },
+          },
           user: {
             additionalFields: {
               role: {
