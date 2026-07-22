@@ -31,14 +31,14 @@ export async function getAuth() {
           socialProviders.google = {
             clientId: env.googleClientId,
             clientSecret: env.googleClientSecret,
-            skipStateCookieCheck: true,
+            redirectURI: `${env.betterAuthUrl}/callback/google`,
           };
         }
         if (env.facebookClientId && env.facebookClientSecret) {
           socialProviders.facebook = {
             clientId: env.facebookClientId,
             clientSecret: env.facebookClientSecret,
-            skipStateCookieCheck: true,
+            redirectURI: `${env.betterAuthUrl}/callback/facebook`,
           };
         }
         return betterAuth({
