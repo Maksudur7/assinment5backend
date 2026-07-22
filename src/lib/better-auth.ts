@@ -55,7 +55,7 @@ export async function getAuth() {
           // Email + Password auth
           emailAndPassword: {
             enabled: true,
-            requireEmailVerification: true,
+            requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION === "true",
             sendResetPassword: async ({
               user,
               url,
