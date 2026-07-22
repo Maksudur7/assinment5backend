@@ -27,8 +27,13 @@ app.get("/", (_req, res) => {
 const allowedOrigins = new Set(
   [
     env.appUrl,
+    env.betterAuthUrl,
     env.frontendAppUrl,
     ...(Array.isArray(env.frontendAppUrls) ? env.frontendAppUrls : []),
+    "https://ngv-black.vercel.app",
+    "https://ngv-backend.vercel.app",
+    "http://localhost:3000",
+    "http://localhost:4000",
   ]
     .filter(Boolean)
     .map((url) => url.trim().replace(/\/+$/, ""))
