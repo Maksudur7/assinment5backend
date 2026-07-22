@@ -43,7 +43,14 @@ const allowedOrigins = new Set(
 
 const corsOptions = {
   origin(origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) {
-    if (!origin || allowedOrigins.has(origin.trim().replace(/\/+$/, ""))) {
+    if (!origin) return callback(null, true);
+    const cleaned = origin.trim().replace(/\/+$/, "");
+    if (
+      allowedOrigins.has(cleaned) ||
+      cleaned.endsWith(".vercel.app") ||
+      cleaned.includes("localhost") ||
+      cleaned.includes("127.0.0.1")
+    ) {
       return callback(null, true);
     }
 
@@ -73,23 +80,6 @@ const nativeImport = new Function("specifier", "return import(specifier);");
 // Better Auth handler MUST be before express.json() so it can read the raw request stream
 app.all(/^\/api\/auth\/(.*)/, async (req, res, next) => {
   try {
-    const subPath = req.params[0] || "";
-    // Bypass Better-Auth handler for custom endpoints to avoid 404 intercepts
-    if (
-      subPath === "sessions" ||
-      subPath.startsWith("sessions/") ||
-      subPath === "get-session" ||
-      subPath.startsWith("user/") ||
-      subPath === "sign-up/email" ||
-      subPath === "signup/email" ||
-      subPath === "sign-in/email" ||
-      subPath === "signin/email" ||
-      subPath === "email/signup" ||
-      subPath === "email/signin"
-    ) {
-      return next();
-    }
-
     const auth = await getAuth();
     const { toNodeHandler } = await nativeImport("better-auth/node");
     const handler = toNodeHandler(auth);

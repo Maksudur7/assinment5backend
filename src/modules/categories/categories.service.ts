@@ -7,11 +7,14 @@ export async function listCategories() {
 
 export async function listCategoryVideos(categoryName: string) {
 	const items = await prisma.media.findMany({
-		where: {
-			genres: { has: categoryName },
-		},
 		orderBy: { popularity: "desc" },
 	});
 
-	return addMediaMetrics(items);
+	const target = categoryName.trim().toLowerCase();
+	const matching = items.filter((item) =>
+		Array.isArray(item.genres) &&
+		item.genres.some((g) => String(g).trim().toLowerCase() === target)
+	);
+
+	return addMediaMetrics(matching);
 }

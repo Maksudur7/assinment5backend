@@ -32,8 +32,8 @@ export const env = {
   nodeEnv: process.env.NODE_ENV || "production",
 
   // App URLs
-  appUrl: isLocal ? "http://localhost:4000" : (process.env.APP_URL || "https://ngv-backend.vercel.app").replace(/\/+$/, ""),
-  frontendAppUrl: primaryFrontendUrl,
+  appUrl: (process.env.APP_URL || (isLocal ? "http://localhost:4000" : "https://ngv-backend.vercel.app")).replace(/\/+$/, ""),
+  frontendAppUrl: process.env.FRONTEND_APP_URL || primaryFrontendUrl,
   frontendAppUrls: Array.from(
     new Set([
       ...parsedFrontendUrls,
@@ -45,17 +45,22 @@ export const env = {
   // Better Auth
   betterAuthSecret: requireEnv("BETTER_AUTH_SECRET", "F2TUbwu1iD8UEYnpuP0SLScCwyyfF4e9"),
   betterAuthUrl: (() => {
-    const rawUrl = isLocal ? "http://localhost:4000" : (
+    const rawUrl = (
       process.env.BETTER_AUTH_URL ||
       process.env.APP_URL ||
-      "https://ngv-backend.vercel.app"
+      (isLocal ? "http://localhost:4000" : "https://ngv-backend.vercel.app")
     ).replace(/\/+$/, "");
     return rawUrl.endsWith("/api/auth") ? rawUrl : `${rawUrl}/api/auth`;
   })(),
 
-  // Email — Resend
+  // Email — Resend & SMTP (Nodemailer)
   resendApiKey: process.env.RESEND_API_KEY || "",
   emailFrom: process.env.EMAIL_FROM || "NGV <onboarding@resend.dev>",
+  smtpHost: process.env.SMTP_HOST || "smtp.gmail.com",
+  smtpPort: Number(process.env.SMTP_PORT || 465),
+  smtpSecure: process.env.SMTP_SECURE !== "false",
+  smtpUser: process.env.SMTP_USER || process.env.GMAIL_USER || "",
+  smtpPass: process.env.SMTP_PASS || process.env.GMAIL_PASS || "",
 
   // Social OAuth
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
