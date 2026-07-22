@@ -45,9 +45,6 @@ export async function getAuth() {
             clientSecret: env.facebookClientSecret,
           };
         }
-
-        console.log("🔴 [DEBUG] socialProviders loaded:", Object.keys(socialProviders));
-
         return betterAuth({
           secret: env.betterAuthSecret,
           baseURL: env.betterAuthUrl,
