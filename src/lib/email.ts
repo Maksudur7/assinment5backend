@@ -3,9 +3,10 @@ import { env } from "../config/env";
 
 let resend: Resend | null = null;
 
-function getResend(): Resend {
+function getResend(): Resend | null {
+  if (!env.resendApiKey) return null;
   if (!resend) {
-    resend = new Resend(env.resendApiKey || "re_placeholder");
+    resend = new Resend(env.resendApiKey);
   }
   return resend;
 }
@@ -15,13 +16,48 @@ export async function sendEmail(
   subject: string,
   html: string,
 ): Promise<void> {
-  if (!env.resendApiKey) {
-    // In development without a key, just log
-    console.info(`[EMAIL] To: ${to} | Subject: ${subject}`);
-    console.info(`[EMAIL] (Set RESEND_API_KEY in .env to send real emails)`);
+  const client = getResend();
+
+  // Safe sender domain fallback: Resend free tier/testing requires onboarding@resend.dev
+  let sender = env.emailFrom || "NGV <onboarding@resend.dev>";
+  if (
+    sender.includes("yourdomain.com") ||
+    sender.includes("ngv.local") ||
+    !sender.includes("@")
+  ) {
+    sender = "NGV <onboarding@resend.dev>";
+  }
+
+  if (!client) {
+    console.info(`[EMAIL LOG] To: ${to} | Subject: ${subject}`);
+    console.info(`[EMAIL LOG] (Set RESEND_API_KEY in .env to dispatch live emails)`);
     return;
   }
-  await getResend().emails.send({ from: env.emailFrom, to, subject, html });
+
+  try {
+    const response = await client.emails.send({ from: sender, to, subject, html });
+    if (response.error) {
+      console.warn(`[EMAIL WARNING] Resend error for ${to}:`, response.error);
+      if (
+        response.error.message?.includes("domain") ||
+        response.error.message?.includes("from")
+      ) {
+        console.info(`[EMAIL RETRY] Attempting retry with onboarding@resend.dev...`);
+        await client.emails.send({
+          from: "NGV <onboarding@resend.dev>",
+          to,
+          subject,
+          html,
+        }).catch((retryErr) => {
+          console.error(`[EMAIL RETRY ERROR]`, retryErr?.message || retryErr);
+        });
+      }
+    } else {
+      console.info(`[EMAIL SUCCESS] Sent to ${to} (ID: ${response.data?.id})`);
+    }
+  } catch (err: any) {
+    console.error(`[EMAIL ERROR] Failed to send email to ${to}:`, err?.message || err);
+  }
 }
 
 // ── Email Templates ─────────────────────────────────────────────────────────

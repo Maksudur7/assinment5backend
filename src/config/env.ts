@@ -12,29 +12,44 @@ function requireEnv(key: string, fallback?: string): string {
   return value || "";
 }
 
+const rawFrontendUrl =
+  process.env.FRONTEND_APP_URL ||
+  process.env.FRONTEND_APP_URLS ||
+  "https://ngv-black.vercel.app";
+
+const parsedFrontendUrls = rawFrontendUrl
+  .split(",")
+  .map((v) => v.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+
+const primaryFrontendUrl = parsedFrontendUrls[0] || "https://ngv-black.vercel.app";
+
 export const env = {
   port: Number(process.env.PORT || 4000),
-  nodeEnv: process.env.NODE_ENV || "development",
+  nodeEnv: process.env.NODE_ENV || "production",
 
   // App URLs
-  appUrl: process.env.APP_URL || "http://localhost:4000",
-  frontendAppUrl: process.env.FRONTEND_APP_URL || "http://localhost:3000",
-  frontendAppUrls: (
-    process.env.FRONTEND_APP_URLS ||
-    process.env.FRONTEND_APP_URL ||
-    "http://localhost:3000"
-  )
-    .split(",")
-    .map((v) => v.trim())
-    .filter(Boolean),
+  appUrl: (process.env.APP_URL || "https://ngv-backend.vercel.app").replace(/\/+$/, ""),
+  frontendAppUrl: primaryFrontendUrl,
+  frontendAppUrls: Array.from(
+    new Set([
+      ...parsedFrontendUrls,
+      "https://ngv-black.vercel.app",
+      "http://localhost:3000",
+    ])
+  ),
 
   // Better Auth
-  betterAuthSecret: requireEnv("BETTER_AUTH_SECRET"),
-  betterAuthUrl: process.env.BETTER_AUTH_URL || "http://localhost:4000",
+  betterAuthSecret: requireEnv("BETTER_AUTH_SECRET", "F2TUbwu1iD8UEYnpuP0SLScCwyyfF4e9"),
+  betterAuthUrl: (
+    process.env.BETTER_AUTH_URL ||
+    process.env.APP_URL ||
+    "https://ngv-backend.vercel.app"
+  ).replace(/\/+$/, ""),
 
   // Email — Resend
   resendApiKey: process.env.RESEND_API_KEY || "",
-  emailFrom: process.env.EMAIL_FROM || "NGV <noreply@ngv.local>",
+  emailFrom: process.env.EMAIL_FROM || "NGV <onboarding@resend.dev>",
 
   // Social OAuth
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
@@ -50,3 +65,4 @@ export const env = {
     "replace-with-strong-watch-token-secret-32chars",
   ),
 };
+

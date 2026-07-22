@@ -81,14 +81,29 @@ export async function getAuth() {
             sendVerificationEmail: async ({
               user,
               url,
+              token,
             }: {
               user: { email: string; name: string };
               url: string;
+              token?: string;
             }) => {
+              // Construct direct frontend verification URL
+              const verificationToken =
+                token ||
+                (url.includes("token=")
+                  ? new URL(url).searchParams.get("token") || ""
+                  : "");
+
+              const verificationUrl = verificationToken
+                ? `${env.frontendAppUrl}/verify-email?token=${encodeURIComponent(verificationToken)}`
+                : url;
+
+              console.info(`[VERIFICATION LINK] ${user.email} -> ${verificationUrl}`);
+
               await sendEmail(
                 user.email,
-                "Verify your NGV account",
-                verificationEmailTemplate(url),
+                "Verify your NGV account 🎬",
+                verificationEmailTemplate(verificationUrl),
               );
             },
           },
@@ -100,7 +115,14 @@ export async function getAuth() {
 
           // Security
           trustedOrigins: Array.from(
-            new Set([env.appUrl, env.betterAuthUrl, ...env.frontendAppUrls]),
+            new Set([
+              env.appUrl,
+              env.betterAuthUrl,
+              env.frontendAppUrl,
+              ...env.frontendAppUrls,
+              "https://ngv-black.vercel.app",
+              "https://ngv-backend.vercel.app",
+            ]),
           ),
 
           // Session config
