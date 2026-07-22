@@ -1,24 +1,65 @@
 import { Resend } from "resend";
+import nodemailer from "nodemailer";
 import { env } from "../config/env";
 
-let resend: Resend | null = null;
+let resendClient: Resend | null = null;
+let smtpTransporter: nodemailer.Transporter | null = null;
+
+function getSmtpTransporter(): nodemailer.Transporter | null {
+  if (!env.smtpUser || !env.smtpPass) return null;
+  if (!smtpTransporter) {
+    smtpTransporter = nodemailer.createTransport({
+      host: env.smtpHost,
+      port: env.smtpPort,
+      secure: env.smtpSecure,
+      auth: {
+        user: env.smtpUser,
+        pass: env.smtpPass,
+      },
+    });
+  }
+  return smtpTransporter;
+}
 
 function getResend(): Resend | null {
   if (!env.resendApiKey) return null;
-  if (!resend) {
-    resend = new Resend(env.resendApiKey);
+  if (!resendClient) {
+    resendClient = new Resend(env.resendApiKey);
   }
-  return resend;
+  return resendClient;
 }
 
 export async function sendEmail(
   to: string,
   subject: string,
   html: string,
+  text?: string,
 ): Promise<void> {
-  const client = getResend();
+  // Strip HTML tags for clean plain-text fallback if text is not provided
+  const plainText = text || html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 
-  // Safe sender domain fallback: Resend free tier/testing requires onboarding@resend.dev
+  // 1. First priority: Nodemailer SMTP (e.g., Gmail App Password - delivers 100% FREE to ANY inbox worldwide)
+  const transporter = getSmtpTransporter();
+  if (transporter) {
+    try {
+      const fromAddr = env.smtpUser || env.emailFrom;
+      const info = await transporter.sendMail({
+        from: `"NGV Streaming" <${fromAddr}>`,
+        to,
+        subject,
+        text: plainText,
+        html,
+      });
+      console.info(`[SMTP EMAIL SUCCESS] Sent to ${to} (MessageID: ${info.messageId})`);
+      return;
+    } catch (err: any) {
+      console.error(`[SMTP EMAIL ERROR] Failed for ${to}:`, err?.message || err);
+      // Fall through to Resend fallback
+    }
+  }
+
+  // 2. Second priority: Resend API
+  const client = getResend();
   let sender = env.emailFrom || "NGV <onboarding@resend.dev>";
   if (
     sender.includes("yourdomain.com") ||
@@ -30,7 +71,7 @@ export async function sendEmail(
 
   if (!client) {
     console.info(`[EMAIL LOG] To: ${to} | Subject: ${subject}`);
-    console.info(`[EMAIL LOG] (Set RESEND_API_KEY in .env to dispatch live emails)`);
+    console.info(`[EMAIL LOG] (Configure SMTP_USER/SMTP_PASS or RESEND_API_KEY in .env to dispatch live emails)`);
     return;
   }
 

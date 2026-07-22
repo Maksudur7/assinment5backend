@@ -80,23 +80,6 @@ const nativeImport = new Function("specifier", "return import(specifier);");
 // Better Auth handler MUST be before express.json() so it can read the raw request stream
 app.all(/^\/api\/auth\/(.*)/, async (req, res, next) => {
   try {
-    const subPath = req.params[0] || "";
-    // Bypass Better-Auth handler for custom endpoints to avoid 404 intercepts
-    if (
-      subPath === "sessions" ||
-      subPath.startsWith("sessions/") ||
-      subPath === "get-session" ||
-      subPath.startsWith("user/") ||
-      subPath === "sign-up/email" ||
-      subPath === "signup/email" ||
-      subPath === "sign-in/email" ||
-      subPath === "signin/email" ||
-      subPath === "email/signup" ||
-      subPath === "email/signin"
-    ) {
-      return next();
-    }
-
     const auth = await getAuth();
     const { toNodeHandler } = await nativeImport("better-auth/node");
     const handler = toNodeHandler(auth);

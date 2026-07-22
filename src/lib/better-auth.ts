@@ -47,6 +47,15 @@ export async function getAuth() {
           database: prismaAdapter(prisma, {
             provider: "postgresql",
           }),
+          user: {
+            additionalFields: {
+              role: {
+                type: "string",
+                defaultValue: "user",
+                input: false,
+              },
+            },
+          },
           account: {
             skipStateCookieCheck: true,
             storeStateStrategy: "cookie",
@@ -59,14 +68,28 @@ export async function getAuth() {
             sendResetPassword: async ({
               user,
               url,
+              token,
             }: {
               user: { email: string; name: string };
               url: string;
+              token?: string;
             }) => {
+              const resetToken =
+                token ||
+                (url.includes("token=")
+                  ? new URL(url).searchParams.get("token") || ""
+                  : "");
+
+              const resetUrl = resetToken
+                ? `${env.frontendAppUrl}/reset-password?token=${encodeURIComponent(resetToken)}`
+                : url;
+
+              console.info(`[RESET LINK] ${user.email} -> ${resetUrl}`);
+
               await sendEmail(
                 user.email,
-                "Reset your NGV password",
-                passwordResetEmailTemplate(url),
+                "Reset your NGV password 🔑",
+                passwordResetEmailTemplate(resetUrl),
               );
             },
           },

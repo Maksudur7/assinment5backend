@@ -16,18 +16,7 @@ import {
 
 const authRouter = Router();
 
-// ── Registration & Login ────────────────────────────────────────────────────
-authRouter.post("/email/signup", asyncHandler(emailSignupController));
-authRouter.post("/sign-up/email", asyncHandler(emailSignupController));  // Better Auth compat alias
-authRouter.post("/signup/email", asyncHandler(emailSignupController));   // Better Auth compat alias
-
-authRouter.post("/email/signin", asyncHandler(emailSigninController));
-authRouter.post("/sign-in/email", asyncHandler(emailSigninController));   // Better Auth compat alias
-authRouter.post("/signin/email", asyncHandler(emailSigninController));    // Better Auth compat alias
-
-// ── Sign Out ────────────────────────────────────────────────────────────────
-authRouter.post("/sign-out", asyncHandler(signoutController));
-authRouter.post("/signout", asyncHandler(signoutController));
+// Custom Session & User Management Routes (handled after Better Auth native routes)
 
 // ── Session Management (requires auth) ─────────────────────────────────────
 authRouter.get("/session", authenticate, asyncHandler(sessionController));
