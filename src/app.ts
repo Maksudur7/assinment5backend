@@ -2,6 +2,7 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import path from "path";
 
 import { env } from "./config/env";
 import authRouter from "./modules/auth/auth.router";
@@ -77,7 +78,13 @@ app.all(/^\/api\/auth\/(.*)/, async (req, res, next) => {
       subPath === "sessions" ||
       subPath.startsWith("sessions/") ||
       subPath === "get-session" ||
-      subPath.startsWith("user/")
+      subPath.startsWith("user/") ||
+      subPath === "sign-up/email" ||
+      subPath === "signup/email" ||
+      subPath === "sign-in/email" ||
+      subPath === "signin/email" ||
+      subPath === "email/signup" ||
+      subPath === "email/signin"
     ) {
       return next();
     }
@@ -97,6 +104,8 @@ app.all(/^\/api\/auth\/(.*)/, async (req, res, next) => {
     next(err);
   }
 });
+
+app.use("/uploads", express.static(path.join(process.cwd(), "public/uploads")));
 
 // Now apply express.json() for all other custom routes
 app.use(express.json());

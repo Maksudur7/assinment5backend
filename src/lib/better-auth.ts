@@ -31,12 +31,14 @@ export async function getAuth() {
           socialProviders.google = {
             clientId: env.googleClientId,
             clientSecret: env.googleClientSecret,
+            skipStateCookieCheck: true,
           };
         }
         if (env.facebookClientId && env.facebookClientSecret) {
           socialProviders.facebook = {
             clientId: env.facebookClientId,
             clientSecret: env.facebookClientSecret,
+            skipStateCookieCheck: true,
           };
         }
         return betterAuth({
@@ -47,6 +49,7 @@ export async function getAuth() {
           }),
           account: {
             skipStateCookieCheck: true,
+            storeStateStrategy: "cookie",
           },
 
           // Email + Password auth

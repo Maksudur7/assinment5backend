@@ -15,8 +15,31 @@ export async function signUpWithEmail(
   email: string,
   password: string,
 ) {
+  // Check for existing user first
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+    include: { accounts: true },
+  });
+
+  if (existingUser) {
+    const isGoogleUser = existingUser.accounts.some(acc => acc.providerId === "google");
+    if (isGoogleUser) {
+      throw new AppError(
+        "An account with this email already exists via Google. Please log in using Google.",
+        400,
+        "EMAIL_EXISTS_GOOGLE"
+      );
+    } else {
+      throw new AppError(
+        "An account with this email already exists. Please log in using your password.",
+        400,
+        "EMAIL_EXISTS_CREDENTIALS"
+      );
+    }
+  }
+
   const auth = await getAuth();
-  await auth.api.signUpEmail({
+  const signupRes = await auth.api.signUpEmail({
     body: { name, email, password },
     asResponse: false,
   });
@@ -29,20 +52,35 @@ export async function signUpWithEmail(
     () => {},
   );
 
-  // Note: Better Auth will automatically send the verification email.
-  // User must verify before they can sign in (requireEmailVerification: true).
   return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    emailVerified: user.emailVerified,
+    ...signupRes,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      emailVerified: user.emailVerified,
+    },
     message:
       "Account created. Please check your email to verify your account before signing in.",
-  } satisfies AuthUser & { token?: string; emailVerified: boolean; message: string };
+  };
 }
 
 export async function signInWithEmail(email: string, password: string) {
+  // Check if this is a Google-only user attempting email signin
+  const existingUser = await prisma.user.findUnique({
+    where: { email },
+    include: { accounts: true },
+  });
+
+  if (existingUser && existingUser.accounts.some(acc => acc.providerId === "google") && !(existingUser as any).passwordHash) {
+    throw new AppError(
+      "This account is registered via Google. Please sign in with Google.",
+      400,
+      "EMAIL_EXISTS_GOOGLE"
+    );
+  }
+
   const auth = await getAuth();
 
   const res = await auth.api.signInEmail({
@@ -70,13 +108,15 @@ export async function signInWithEmail(email: string, password: string) {
   });
 
   return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    emailVerified: user.emailVerified,
+    ...res,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
     token: sessionToken,
-  } satisfies AuthUser & { token: string; emailVerified: boolean };
+  };
 }
 
 export async function getSessionUser(userId: string) {
@@ -104,7 +144,20 @@ export async function getCurrentSession(headers: Headers) {
 
 export async function listActiveSessions(headers: Headers) {
   const auth = await getAuth();
-  return auth.api.listSessions({ headers, asResponse: false });
+  const sessions = await auth.api.listSessions({ headers, asResponse: false });
+  
+  if (!Array.isArray(sessions)) return sessions;
+
+  // Deduplicate sessions by unique User Agent & IP Address to only show unique devices
+  const uniqueDevices = new Map<string, any>();
+  for (const session of sessions) {
+    const key = `${session.userAgent || "unknown"}-${session.ipAddress || "unknown"}`;
+    const existing = uniqueDevices.get(key);
+    if (!existing || new Date(session.updatedAt) > new Date(existing.updatedAt)) {
+      uniqueDevices.set(key, session);
+    }
+  }
+  return Array.from(uniqueDevices.values());
 }
 
 export async function revokeCurrentSession(headers: Headers, token: string) {

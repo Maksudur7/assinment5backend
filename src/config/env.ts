@@ -44,11 +44,14 @@ export const env = {
 
   // Better Auth
   betterAuthSecret: requireEnv("BETTER_AUTH_SECRET", "F2TUbwu1iD8UEYnpuP0SLScCwyyfF4e9"),
-  betterAuthUrl: isLocal ? "http://localhost:4000" : (
-    process.env.BETTER_AUTH_URL ||
-    process.env.APP_URL ||
-    "https://ngv-backend.vercel.app"
-  ).replace(/\/+$/, ""),
+  betterAuthUrl: (() => {
+    const rawUrl = isLocal ? "http://localhost:4000" : (
+      process.env.BETTER_AUTH_URL ||
+      process.env.APP_URL ||
+      "https://ngv-backend.vercel.app"
+    ).replace(/\/+$/, "");
+    return rawUrl.endsWith("/api/auth") ? rawUrl : `${rawUrl}/api/auth`;
+  })(),
 
   // Email — Resend
   resendApiKey: process.env.RESEND_API_KEY || "",

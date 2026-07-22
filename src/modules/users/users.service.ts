@@ -4,10 +4,17 @@ import { AppError } from "../../utils/errors";
 export async function getCurrentUser(userId: string) {
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
-		select: { id: true, name: true, email: true, role: true, image: true },
+		select: { id: true, name: true, email: true, role: true, image: true, passwordHash: true },
 	});
 	if (!user) throw new AppError("User not found", 404, "USER_NOT_FOUND");
-	return user;
+	return {
+		id: user.id,
+		name: user.name,
+		email: user.email,
+		role: user.role,
+		image: user.image,
+		hasPassword: !!user.passwordHash,
+	};
 }
 
 export async function updateCurrentUser(userId: string, name?: string, email?: string) {
@@ -18,11 +25,20 @@ export async function updateCurrentUser(userId: string, name?: string, email?: s
 		if (duplicate) throw new AppError("Email already in use", 409, "VALIDATION_ERROR");
 	}
 
-	return prisma.user.update({
+	const user = await prisma.user.update({
 		where: { id: userId },
 		data: { ...(name ? { name } : {}), ...(email ? { email } : {}) },
-		select: { id: true, name: true, email: true, role: true, image: true },
+		select: { id: true, name: true, email: true, role: true, image: true, passwordHash: true },
 	});
+
+	return {
+		id: user.id,
+		name: user.name,
+		email: user.email,
+		role: user.role,
+		image: user.image,
+		hasPassword: !!user.passwordHash,
+	};
 }
 
 export async function listWatchHistory(userId: string, limit: number, offset: number) {
