@@ -78,14 +78,15 @@ export async function sessionsController(req: Request, res: Response) {
 }
 
 export async function revokeSessionController(req: Request, res: Response) {
-  const { token } = req.body || {};
-  if (!token) throw new AppError("token required", 422, "VALIDATION_ERROR");
+  const { id, token } = req.body || {};
+  const sessionId = id || token;
+  if (!sessionId) throw new AppError("session id required", 422, "VALIDATION_ERROR");
   return res
     .status(200)
     .json(
       await revokeCurrentSession(
         new Headers(req.headers as Record<string, string>),
-        String(token),
+        String(sessionId),
       ),
     );
 }

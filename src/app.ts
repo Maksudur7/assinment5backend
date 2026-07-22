@@ -2,6 +2,7 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import path from "path";
 
 import { env } from "./config/env";
 import authRouter from "./modules/auth/auth.router";
@@ -19,6 +20,7 @@ import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { rateLimiter } from "./middleware/rate-limit";
 
 const app = express();
+app.set("trust proxy", true);
 
 app.get("/", (_req, res) => {
   res.json({ message: "NGV backend running!" });
@@ -71,6 +73,23 @@ const nativeImport = new Function("specifier", "return import(specifier);");
 // Better Auth handler MUST be before express.json() so it can read the raw request stream
 app.all(/^\/api\/auth\/(.*)/, async (req, res, next) => {
   try {
+    const subPath = req.params[0] || "";
+    // Bypass Better-Auth handler for custom endpoints to avoid 404 intercepts
+    if (
+      subPath === "sessions" ||
+      subPath.startsWith("sessions/") ||
+      subPath === "get-session" ||
+      subPath.startsWith("user/") ||
+      subPath === "sign-up/email" ||
+      subPath === "signup/email" ||
+      subPath === "sign-in/email" ||
+      subPath === "signin/email" ||
+      subPath === "email/signup" ||
+      subPath === "email/signin"
+    ) {
+      return next();
+    }
+
     const auth = await getAuth();
     const { toNodeHandler } = await nativeImport("better-auth/node");
     const handler = toNodeHandler(auth);
@@ -86,6 +105,8 @@ app.all(/^\/api\/auth\/(.*)/, async (req, res, next) => {
     next(err);
   }
 });
+
+app.use("/uploads", express.static(path.join(process.cwd(), "public/uploads")));
 
 // Now apply express.json() for all other custom routes
 app.use(express.json());

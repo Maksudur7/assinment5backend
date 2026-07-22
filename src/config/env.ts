@@ -12,24 +12,27 @@ function requireEnv(key: string, fallback?: string): string {
   return value || "";
 }
 
-const rawFrontendUrl =
-  process.env.FRONTEND_APP_URL ||
-  process.env.FRONTEND_APP_URLS ||
-  "https://ngv-black.vercel.app";
+const isLocal = !process.env.VERCEL && (process.env.NODE_ENV !== "production" || process.env.PORT === "4000" || !process.env.PORT);
+
+const rawFrontendUrl = isLocal
+  ? "http://localhost:3000"
+  : (process.env.FRONTEND_APP_URL ||
+     process.env.FRONTEND_APP_URLS ||
+     "https://ngv-black.vercel.app");
 
 const parsedFrontendUrls = rawFrontendUrl
   .split(",")
   .map((v) => v.trim().replace(/\/+$/, ""))
   .filter(Boolean);
 
-const primaryFrontendUrl = parsedFrontendUrls[0] || "https://ngv-black.vercel.app";
+const primaryFrontendUrl = parsedFrontendUrls[0] || (isLocal ? "http://localhost:3000" : "https://ngv-black.vercel.app");
 
 export const env = {
   port: Number(process.env.PORT || 4000),
   nodeEnv: process.env.NODE_ENV || "production",
 
   // App URLs
-  appUrl: (process.env.APP_URL || "https://ngv-backend.vercel.app").replace(/\/+$/, ""),
+  appUrl: isLocal ? "http://localhost:4000" : (process.env.APP_URL || "https://ngv-backend.vercel.app").replace(/\/+$/, ""),
   frontendAppUrl: primaryFrontendUrl,
   frontendAppUrls: Array.from(
     new Set([
@@ -41,11 +44,14 @@ export const env = {
 
   // Better Auth
   betterAuthSecret: requireEnv("BETTER_AUTH_SECRET", "F2TUbwu1iD8UEYnpuP0SLScCwyyfF4e9"),
-  betterAuthUrl: (
-    process.env.BETTER_AUTH_URL ||
-    process.env.APP_URL ||
-    "https://ngv-backend.vercel.app"
-  ).replace(/\/+$/, ""),
+  betterAuthUrl: (() => {
+    const rawUrl = isLocal ? "http://localhost:4000" : (
+      process.env.BETTER_AUTH_URL ||
+      process.env.APP_URL ||
+      "https://ngv-backend.vercel.app"
+    ).replace(/\/+$/, "");
+    return rawUrl.endsWith("/api/auth") ? rawUrl : `${rawUrl}/api/auth`;
+  })(),
 
   // Email — Resend
   resendApiKey: process.env.RESEND_API_KEY || "",

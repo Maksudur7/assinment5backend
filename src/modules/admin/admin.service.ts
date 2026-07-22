@@ -99,3 +99,48 @@ export async function createMedia(payload: any) {
   const [enriched] = await addMediaMetrics([created]);
   return enriched;
 }
+
+export async function approveComment(commentId: string) {
+  const comment = await prisma.reviewComment.findUnique({ where: { id: commentId } });
+  if (!comment) throw new AppError("Comment not found", 404, "NOT_FOUND");
+  return { success: true, commentId };
+}
+
+export async function rejectComment(commentId: string) {
+  const comment = await prisma.reviewComment.findUnique({ where: { id: commentId } });
+  if (!comment) throw new AppError("Comment not found", 404, "NOT_FOUND");
+  await prisma.reviewComment.delete({ where: { id: commentId } });
+  return { success: true, commentId };
+}
+
+export async function removeComment(commentId: string) {
+  const comment = await prisma.reviewComment.findUnique({ where: { id: commentId } });
+  if (!comment) throw new AppError("Comment not found", 404, "NOT_FOUND");
+  await prisma.reviewComment.delete({ where: { id: commentId } });
+  return { success: true, commentId };
+}
+
+export async function createCategory(payload: { name: string; icon?: string }) {
+  if (!payload.name) {
+    throw new AppError("Category name is required", 422, "VALIDATION_ERROR");
+  }
+  const existing = await prisma.category.findUnique({ where: { name: payload.name } });
+  if (existing) {
+    throw new AppError("Category already exists", 400, "CATEGORY_EXISTS");
+  }
+  return prisma.category.create({
+    data: {
+      name: payload.name,
+      icon: payload.icon || "Film",
+    },
+  });
+}
+
+export async function deleteCategory(id: string) {
+  const existing = await prisma.category.findUnique({ where: { id } });
+  if (!existing) {
+    throw new AppError("Category not found", 404, "NOT_FOUND");
+  }
+  await prisma.category.delete({ where: { id } });
+  return { success: true, message: "Category deleted" };
+}
