@@ -24,15 +24,19 @@ app.get("/", (_req, res) => {
   res.json({ message: "NGV backend running!" });
 });
 
-const allowedOrigins = new Set([
-  env.appUrl,
-  env.frontendAppUrl,
-  ...(Array.isArray(env.frontendAppUrls) ? env.frontendAppUrls : []),
-]);
+const allowedOrigins = new Set(
+  [
+    env.appUrl,
+    env.frontendAppUrl,
+    ...(Array.isArray(env.frontendAppUrls) ? env.frontendAppUrls : []),
+  ]
+    .filter(Boolean)
+    .map((url) => url.trim().replace(/\/+$/, ""))
+);
 
 const corsOptions = {
   origin(origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) {
-    if (!origin || allowedOrigins.has(origin)) {
+    if (!origin || allowedOrigins.has(origin.trim().replace(/\/+$/, ""))) {
       return callback(null, true);
     }
 

@@ -45,15 +45,15 @@ export async function getAuth() {
             clientSecret: env.facebookClientSecret,
           };
         }
-
-        console.log("🔴 [DEBUG] socialProviders loaded:", Object.keys(socialProviders));
-
         return betterAuth({
           secret: env.betterAuthSecret,
           baseURL: env.betterAuthUrl,
           database: prismaAdapter(prisma, {
             provider: "postgresql",
           }),
+          account: {
+            skipStateCookieCheck: true,
+          },
 
           // Email + Password auth with verification required
           emailAndPassword: {

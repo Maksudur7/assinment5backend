@@ -27,10 +27,12 @@ const allowedOrigins = new Set([
     env_1.env.appUrl,
     env_1.env.frontendAppUrl,
     ...(Array.isArray(env_1.env.frontendAppUrls) ? env_1.env.frontendAppUrls : []),
-]);
+]
+    .filter(Boolean)
+    .map((url) => url.trim().replace(/\/+$/, "")));
 const corsOptions = {
     origin(origin, callback) {
-        if (!origin || allowedOrigins.has(origin)) {
+        if (!origin || allowedOrigins.has(origin.trim().replace(/\/+$/, ""))) {
             return callback(null, true);
         }
         return callback(new Error("CORS origin not allowed"));
@@ -41,19 +43,20 @@ const corsOptions = {
 };
 app.use((0, helmet_1.default)());
 app.use((0, cors_1.default)(corsOptions));
-app.use(express_1.default.json());
 app.use((0, rate_limit_1.rateLimiter)({ windowMs: 60 * 60 * 1000, max: 1000 }));
 app.use("/api/auth", (0, rate_limit_1.rateLimiter)({ windowMs: 60 * 1000, max: 10 }));
 app.get("/health", (_req, res) => {
     return res.status(200).json({ ok: true });
 });
 const better_auth_1 = require("./lib/better-auth");
-const node_1 = require("better-auth/node");
-// Use app.all with regex to avoid Express 5 path errors, and avoid app.use which strips req.url
+// Native dynamic import to bypass CommonJS require() conversion by Vercel/TypeScript
+const nativeImport = new Function("specifier", "return import(specifier);");
+// Better Auth handler MUST be before express.json() so it can read the raw request stream
 app.all(/^\/api\/auth\/(.*)/, async (req, res, next) => {
     try {
         const auth = await (0, better_auth_1.getAuth)();
-        const handler = (0, node_1.toNodeHandler)(auth);
+        const { toNodeHandler } = await nativeImport("better-auth/node");
+        const handler = toNodeHandler(auth);
         // We pass req and res to better-auth
         await handler(req, res);
         // If better-auth didn't handle it, pass to custom router
@@ -65,6 +68,8 @@ app.all(/^\/api\/auth\/(.*)/, async (req, res, next) => {
         next(err);
     }
 });
+// Now apply express.json() for all other custom routes
+app.use(express_1.default.json());
 app.use("/api/auth", auth_router_1.default);
 app.use("/api/media", media_router_1.default);
 app.use("/api/categories", categories_router_1.default);

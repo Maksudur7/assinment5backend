@@ -45,6 +45,9 @@ async function getAuth() {
                     database: prismaAdapter(prisma_1.default, {
                         provider: "postgresql",
                     }),
+                    account: {
+                        skipStateCookieCheck: true,
+                    },
                     // Email + Password auth with verification required
                     emailAndPassword: {
                         enabled: true,
