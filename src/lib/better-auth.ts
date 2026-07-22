@@ -119,6 +119,8 @@ export async function getAuth() {
               ...env.frontendAppUrls,
               "https://ngv-black.vercel.app",
               "https://ngv-backend.vercel.app",
+              "http://localhost:3000",
+              "http://localhost:4000",
             ]),
           ),
 

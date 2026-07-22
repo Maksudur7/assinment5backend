@@ -43,7 +43,14 @@ const allowedOrigins = new Set(
 
 const corsOptions = {
   origin(origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) {
-    if (!origin || allowedOrigins.has(origin.trim().replace(/\/+$/, ""))) {
+    if (!origin) return callback(null, true);
+    const cleaned = origin.trim().replace(/\/+$/, "");
+    if (
+      allowedOrigins.has(cleaned) ||
+      cleaned.endsWith(".vercel.app") ||
+      cleaned.includes("localhost") ||
+      cleaned.includes("127.0.0.1")
+    ) {
       return callback(null, true);
     }
 
