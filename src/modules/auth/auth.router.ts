@@ -19,9 +19,11 @@ const authRouter = Router();
 // ── Registration & Login ────────────────────────────────────────────────────
 authRouter.post("/email/signup", asyncHandler(emailSignupController));
 authRouter.post("/sign-up/email", asyncHandler(emailSignupController));  // Better Auth compat alias
+authRouter.post("/signup/email", asyncHandler(emailSignupController));   // Better Auth compat alias
 
 authRouter.post("/email/signin", asyncHandler(emailSigninController));
 authRouter.post("/sign-in/email", asyncHandler(emailSigninController));   // Better Auth compat alias
+authRouter.post("/signin/email", asyncHandler(emailSigninController));    // Better Auth compat alias
 
 // ── Sign Out ────────────────────────────────────────────────────────────────
 authRouter.post("/sign-out", asyncHandler(signoutController));
