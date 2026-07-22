@@ -22,11 +22,15 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
     });
 
     if (sessionData && sessionData.session && sessionData.user) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: sessionData.user.id },
+        select: { role: true },
+      });
       req.user = {
         id: sessionData.user.id,
         name: sessionData.user.name,
         email: sessionData.user.email,
-        role: (sessionData.user as any).role || "user",
+        role: dbUser?.role || "user",
       };
       req.session = sessionData.session;
       return next();
