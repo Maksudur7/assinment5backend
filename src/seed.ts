@@ -1,7 +1,5 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "./lib/prisma";
 import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
 
 async function main() {
   console.log("Seeding demo users...");
@@ -74,7 +72,39 @@ async function main() {
       data: { password: userPassword }
     });
   }
-  console.log("✅ Standard user created/updated (maksudurr538@gmail.com)");
+  // Seed Standard User (user@ngv.local)
+  const stdUserPassword = await bcrypt.hash("user12345", 10);
+  const stdUser = await prisma.user.upsert({
+    where: { email: "user@ngv.local" },
+    update: { role: "user", passwordHash: stdUserPassword, emailVerified: true },
+    create: {
+      name: "Demo User",
+      email: "user@ngv.local",
+      passwordHash: stdUserPassword,
+      role: "user",
+      emailVerified: true
+    }
+  });
+
+  const stdUserAccount = await prisma.account.findFirst({
+    where: { userId: stdUser.id, providerId: "credential" }
+  });
+  if (!stdUserAccount) {
+    await prisma.account.create({
+      data: {
+        userId: stdUser.id,
+        accountId: stdUser.email,
+        providerId: "credential",
+        password: stdUserPassword
+      }
+    });
+  } else {
+    await prisma.account.update({
+      where: { id: stdUserAccount.id },
+      data: { password: stdUserPassword }
+    });
+  }
+  console.log("✅ Standard user created/updated (user@ngv.local)");
 
   console.log("🎉 Seeding complete! You can now login with demo credentials.");
 }

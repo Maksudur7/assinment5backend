@@ -4,7 +4,7 @@ import { AppError } from "../../utils/errors";
 export async function getCurrentUser(userId: string) {
 	const user = await prisma.user.findUnique({
 		where: { id: userId },
-		select: { id: true, name: true, email: true, role: true },
+		select: { id: true, name: true, email: true, role: true, image: true },
 	});
 	if (!user) throw new AppError("User not found", 404, "USER_NOT_FOUND");
 	return user;
@@ -21,7 +21,7 @@ export async function updateCurrentUser(userId: string, name?: string, email?: s
 	return prisma.user.update({
 		where: { id: userId },
 		data: { ...(name ? { name } : {}), ...(email ? { email } : {}) },
-		select: { id: true, name: true, email: true, role: true },
+		select: { id: true, name: true, email: true, role: true, image: true },
 	});
 }
 

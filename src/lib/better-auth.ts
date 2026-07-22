@@ -26,17 +26,11 @@ export async function getAuth() {
 
         const socialProviders: Record<string, any> = {};
 
-        // Only enable social providers if credentials are set
+        // Only enable Google & Facebook social providers
         if (env.googleClientId && env.googleClientSecret) {
           socialProviders.google = {
             clientId: env.googleClientId,
             clientSecret: env.googleClientSecret,
-          };
-        }
-        if (env.githubClientId && env.githubClientSecret) {
-          socialProviders.github = {
-            clientId: env.githubClientId,
-            clientSecret: env.githubClientSecret,
           };
         }
         if (env.facebookClientId && env.facebookClientSecret) {
@@ -55,7 +49,7 @@ export async function getAuth() {
             skipStateCookieCheck: true,
           },
 
-          // Email + Password auth with verification required
+          // Email + Password auth
           emailAndPassword: {
             enabled: true,
             requireEmailVerification: true,
@@ -108,7 +102,7 @@ export async function getAuth() {
             },
           },
 
-          // Social OAuth providers (only enabled if env vars set)
+          // Social OAuth providers (Google and Facebook only)
           ...(Object.keys(socialProviders).length > 0
             ? { socialProviders }
             : {}),
@@ -132,6 +126,43 @@ export async function getAuth() {
             cookieCache: {
               enabled: true,
               maxAge: 5 * 60, // 5 minute cache
+            },
+          },
+
+          // Database hooks to sync legacy User fields with Better Auth schema
+          databaseHooks: {
+            user: {
+              create: {
+                after: async (user: any) => {
+                  try {
+                    const account = await prisma.account.findFirst({
+                      where: { userId: user.id, providerId: "credential" },
+                    });
+                    if (account && account.password) {
+                      await prisma.user.update({
+                        where: { id: user.id },
+                        data: { passwordHash: account.password },
+                      });
+                    }
+                  } catch (err) {
+                    console.error("Error in user create after hook:", err);
+                  }
+                },
+              },
+            },
+            session: {
+              create: {
+                after: async (session: any) => {
+                  try {
+                    await prisma.user.update({
+                      where: { id: session.userId },
+                      data: { lastLoginAt: new Date() },
+                    });
+                  } catch (err) {
+                    console.error("Error in session create after hook:", err);
+                  }
+                },
+              },
             },
           },
         });
