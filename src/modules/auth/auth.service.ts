@@ -160,13 +160,30 @@ export async function listActiveSessions(headers: Headers) {
   return Array.from(uniqueDevices.values());
 }
 
-export async function revokeCurrentSession(headers: Headers, token: string) {
+export async function revokeCurrentSession(headers: Headers, sessionId: string) {
   const auth = await getAuth();
-  return auth.api.revokeSession({
-    headers,
-    body: { token },
-    asResponse: false,
+  const currentSession = await auth.api.getSession({ headers, asResponse: false });
+  if (!currentSession || !currentSession.user) {
+    throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
+  }
+
+  const targetSession = await prisma.session.findUnique({
+    where: { id: sessionId },
   });
+
+  if (!targetSession) {
+    throw new AppError("Session not found", 404, "NOT_FOUND");
+  }
+
+  if (targetSession.userId !== currentSession.user.id) {
+    throw new AppError("Forbidden", 403, "FORBIDDEN");
+  }
+
+  await prisma.session.delete({
+    where: { id: sessionId },
+  });
+
+  return { success: true };
 }
 
 export async function revokeAllSessions(headers: Headers) {

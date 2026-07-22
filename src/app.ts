@@ -20,6 +20,7 @@ import { errorHandler, notFoundHandler } from "./middleware/error-handler";
 import { rateLimiter } from "./middleware/rate-limit";
 
 const app = express();
+app.set("trust proxy", true);
 
 app.get("/", (_req, res) => {
   res.json({ message: "NGV backend running!" });
