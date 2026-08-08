@@ -31,26 +31,34 @@ export async function getAuth() {
           socialProviders.google = {
             clientId: env.googleClientId,
             clientSecret: env.googleClientSecret,
-            redirectURI: `${env.appUrl}/api/auth/callback/google`,
+            disableStateCheck: true,
           };
         }
         if (env.facebookClientId && env.facebookClientSecret) {
           socialProviders.facebook = {
             clientId: env.facebookClientId,
             clientSecret: env.facebookClientSecret,
-            redirectURI: `${env.appUrl}/api/auth/callback/facebook`,
+            disableStateCheck: true,
           };
         }
         return betterAuth({
           secret: env.betterAuthSecret,
-          baseURL: env.appUrl, // Root backend URL (https://ngv-backend.vercel.app)
+          baseURL: env.betterAuthUrl, // Auth endpoint URL (e.g., http://localhost:4000/api/auth)
+          trustedOrigins: [
+            "http://localhost:3000",
+            "http://localhost:4000",
+            "https://ngv-black.vercel.app",
+            "https://ngv-backend.vercel.app",
+            env.appUrl,
+            env.frontendAppUrl,
+          ].filter(Boolean) as string[],
           database: prismaAdapter(prisma, {
             provider: "postgresql",
           }),
           advanced: {
             defaultCookieAttributes: {
-              sameSite: "none",
-              secure: true,
+              sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+              secure: process.env.NODE_ENV === "production",
             },
           },
           user: {
@@ -65,6 +73,10 @@ export async function getAuth() {
           account: {
             skipStateCookieCheck: true,
             storeStateStrategy: "cookie",
+            accountLinking: {
+              enabled: true,
+              trustedProviders: ["google", "facebook"],
+            },
           },
 
           // Email + Password auth

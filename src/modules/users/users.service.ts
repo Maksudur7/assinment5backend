@@ -50,11 +50,54 @@ export async function listWatchHistory(userId: string, limit: number, offset: nu
 		take: limit,
 	});
 
+	// Get progress data for all watched media
+	const mediaIds = history.map((h) => h.mediaId);
+	const progresses = await prisma.watchProgress.findMany({
+		where: { userId, mediaId: { in: mediaIds } },
+	});
+	const progressMap = new Map(progresses.map((p) => [p.mediaId, p.progressSeconds]));
+
 	return history.map((item) => ({
 		mediaId: item.mediaId,
 		title: item.media.title,
 		poster: item.media.poster,
+		synopsis: item.media.synopsis,
+		duration: item.media.duration,
+		genres: item.media.genres,
+		releaseYear: item.media.releaseYear,
+		progressSeconds: progressMap.get(item.mediaId) || 0,
 		watchedAt: item.watchedAt,
+	}));
+}
+
+export async function getContinueWatching(userId: string, limit = 10) {
+	// Find all in-progress media (progress > 0, not fully watched)
+	const progresses = await prisma.watchProgress.findMany({
+		where: { userId, progressSeconds: { gt: 0 } },
+		include: { media: true },
+		orderBy: { updatedAt: "desc" },
+		take: limit,
+	});
+
+	return progresses.map((p) => ({
+		mediaId: p.mediaId,
+		progressSeconds: p.progressSeconds,
+		updatedAt: p.updatedAt,
+		media: {
+			id: p.media.id,
+			title: p.media.title,
+			synopsis: p.media.synopsis,
+			poster: p.media.poster,
+			duration: p.media.duration,
+			genres: p.media.genres,
+			releaseYear: p.media.releaseYear,
+			director: p.media.director,
+			cast: p.media.cast,
+			platforms: p.media.platforms,
+			streamingUrl: p.media.streamingUrl,
+			avgRating: 0,
+			totalReviews: 0,
+		},
 	}));
 }
 
