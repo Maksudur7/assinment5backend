@@ -51,14 +51,15 @@ export async function getAuth() {
             "https://ngv-backend.vercel.app",
             env.appUrl,
             env.frontendAppUrl,
+            ...(Array.isArray(env.frontendAppUrls) ? env.frontendAppUrls : []),
           ].filter(Boolean) as string[],
           database: prismaAdapter(prisma, {
             provider: "postgresql",
           }),
           advanced: {
             defaultCookieAttributes: {
-              sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-              secure: process.env.NODE_ENV === "production",
+              sameSite: process.env.NODE_ENV === "production" || !!process.env.VERCEL ? "none" : "lax",
+              secure: process.env.NODE_ENV === "production" || !!process.env.VERCEL,
             },
           },
           user: {

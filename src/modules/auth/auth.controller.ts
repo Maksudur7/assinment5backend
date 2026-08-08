@@ -31,10 +31,11 @@ export async function emailSigninController(req: Request, res: Response) {
   const user = await signInWithEmail(email, password);
 
   if (user.token) {
+    const isProd = process.env.NODE_ENV === "production" || !!process.env.VERCEL;
     res.cookie("token", user.token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV !== "development",
-      sameSite: "lax",
+      secure: isProd,
+      sameSite: isProd ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
   }
@@ -66,7 +67,12 @@ export async function sessionController(req: Request, res: Response) {
 }
 
 export async function signoutController(req: Request, res: Response) {
-  res.clearCookie("token");
+  const isProd = process.env.NODE_ENV === "production" || !!process.env.VERCEL;
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+  });
   return res.status(200).json({ success: true });
 }
 
