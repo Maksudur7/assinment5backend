@@ -23,7 +23,7 @@ export async function getUnreadCountController(req: Request, res: Response) {
 
 export async function markAsReadController(req: Request, res: Response) {
   if (!req.user) throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
-  await markAsRead(req.user.id, req.params.id);
+  await markAsRead(req.user.id, String(req.params.id));
   return res.status(200).json({ ok: true });
 }
 

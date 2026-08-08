@@ -151,19 +151,6 @@ export async function getAuth() {
             ? { socialProviders }
             : {}),
 
-          // Security
-          trustedOrigins: Array.from(
-            new Set([
-              env.appUrl,
-              env.betterAuthUrl,
-              env.frontendAppUrl,
-              ...env.frontendAppUrls,
-              "https://ngv-black.vercel.app",
-              "https://ngv-backend.vercel.app",
-              "http://localhost:3000",
-              "http://localhost:4000",
-            ]),
-          ),
 
           // Session config
           session: {

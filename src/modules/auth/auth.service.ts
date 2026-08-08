@@ -3,7 +3,8 @@ import { AppError } from "../../utils/errors";
 import { getAuth } from "../../lib/better-auth";
 import { sendEmail, welcomeEmailTemplate } from "../../lib/email";
 import bcrypt from "bcryptjs";
-import { crypto } from "node:crypto";
+import * as nodeCrypto from "node:crypto";
+const crypto = nodeCrypto.webcrypto;
 
 function generateToken(): string {
   return `token_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
