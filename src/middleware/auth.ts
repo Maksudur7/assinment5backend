@@ -36,11 +36,20 @@ export async function authenticate(req: Request, _res: Response, next: NextFunct
       return next();
     }
 
-    // 2. Fallback to manual Bearer token prisma session lookup
+    // 2. Fallback to manual Bearer token or Cookie token lookup
     const authHeader = req.headers.authorization || "";
-    const [scheme, token] = authHeader.split(" ");
+    const [scheme, bearerToken] = authHeader.split(" ");
 
-    if (scheme === "Bearer" && token) {
+    const rawCookies = req.headers.cookie || "";
+    const cookieToken = rawCookies
+      .split(";")
+      .map((c) => c.trim())
+      .find((c) => c.startsWith("token=") || c.startsWith("better-auth.session_token="))
+      ?.split("=")[1];
+
+    const token = (scheme === "Bearer" && bearerToken) ? bearerToken : cookieToken;
+
+    if (token) {
       const session = await prisma.session.findUnique({
         where: { token },
         include: { user: true },
