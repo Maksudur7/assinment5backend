@@ -44,6 +44,7 @@ model User {
   watchlistItems   WatchlistItem[]
   watchProgresses  WatchProgress[]
   watchHistories   WatchHistory[]
+  notifications    Notification[]
 
   resetTokens      PasswordResetToken[]
   sessions         Session[]
@@ -120,6 +121,7 @@ model Media {
   watchlistItems  WatchlistItem[]
   watchProgresses WatchProgress[]
   watchHistories  WatchHistory[]
+  seasons         Season[]
 
 
   @@index([releaseYear])
@@ -266,4 +268,61 @@ model LandingFaq {
   answer    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ─── Notification ────────────────────────────────────────────
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String   // "review_approved" | "new_release" | "system" | "watchlist"
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+// ─── Season / Episode (TV Series Support) ────────────────────
+enum MediaType {
+  MOVIE
+  TV_SERIES
+}
+
+model Season {
+  id        String    @id @default(uuid())
+  mediaId   String
+  number    Int
+  title     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  media    Media     @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  episodes Episode[]
+
+  @@unique([mediaId, number])
+  @@index([mediaId])
+}
+
+model Episode {
+  id           String   @id @default(uuid())
+  seasonId     String
+  number       Int
+  title        String
+  synopsis     String?
+  duration     String
+  streamingUrl String
+  thumbnail    String?
+  airDate      DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  season Season @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, number])
+  @@index([seasonId])
 }

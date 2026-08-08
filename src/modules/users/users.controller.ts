@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { AppError } from "../../utils/errors";
-import { getCurrentUser, listWatchHistory, updateCurrentUser, updateWatchProgress } from "./users.service";
+import { getContinueWatching, getCurrentUser, listWatchHistory, updateCurrentUser, updateWatchProgress } from "./users.service";
 import fs from "fs";
 import path from "path";
 import { env } from "../../config/env";
@@ -19,9 +19,15 @@ export async function updateMeController(req: Request, res: Response) {
 
 export async function watchHistoryController(req: Request, res: Response) {
 	if (!req.user) throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
-	const limit = Number.parseInt(String(req.query.limit || 10), 10);
+	const limit = Number.parseInt(String(req.query.limit || 20), 10);
 	const offset = Number.parseInt(String(req.query.offset || 0), 10);
 	return res.status(200).json(await listWatchHistory(req.user.id, limit, offset));
+}
+
+export async function continueWatchingController(req: Request, res: Response) {
+	if (!req.user) throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
+	const limit = Number.parseInt(String(req.query.limit || 10), 10);
+	return res.status(200).json(await getContinueWatching(req.user.id, limit));
 }
 
 export async function updateProgressController(req: Request, res: Response) {
