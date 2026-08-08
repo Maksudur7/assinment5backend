@@ -58,11 +58,11 @@ export async function deleteCategoryController(req: Request, res: Response) {
 }
 
 export async function listUsersController(_req: Request, res: Response) {
-  const { listAllUsers } = await import("./admin.service");
+  const { listAllUsers } = await import("./admin.service.js");
   return res.status(200).json(await listAllUsers());
 }
 
 export async function updateUserRoleController(req: Request, res: Response) {
-  const { updateUserRole } = await import("./admin.service");
+  const { updateUserRole } = await import("./admin.service.js");
   return res.status(200).json(await updateUserRole(String(req.params.userId), String(req.body.role)));
 }

@@ -26,8 +26,8 @@ adminRouter.post("/reviews/:reviewId/approve", asyncHandler(approveReviewControl
 adminRouter.post("/reviews/:reviewId/reject", asyncHandler(rejectReviewController));
 adminRouter.post("/reviews/:reviewId/unpublish", asyncHandler(rejectReviewController));
 adminRouter.delete("/reviews/:reviewId", asyncHandler(async (req, res) => {
-  const prisma = (await import("../../lib/prisma")).default;
-  await prisma.review.delete({ where: { id: req.params.reviewId } });
+  const { default: prisma } = await import("../../lib/prisma.js");
+  await (prisma as any).review.delete({ where: { id: req.params.reviewId } });
   return res.status(200).json({ success: true });
 }));
 adminRouter.post("/comments/:commentId/approve", asyncHandler(approveCommentController));
@@ -39,11 +39,11 @@ adminRouter.post("/media", asyncHandler(createMediaController));
 
 // User Management Routes
 adminRouter.get("/users", asyncHandler(async (req, res, next) => {
-  const { listUsersController } = await import("./admin.controller");
+  const { listUsersController } = await import("./admin.controller.js");
   return listUsersController(req, res);
 }));
 adminRouter.patch("/users/:userId/role", asyncHandler(async (req, res, next) => {
-  const { updateUserRoleController } = await import("./admin.controller");
+  const { updateUserRoleController } = await import("./admin.controller.js");
   return updateUserRoleController(req, res);
 }));
 
