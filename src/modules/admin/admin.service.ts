@@ -28,18 +28,42 @@ export async function getAdminOverview() {
     totalMedia,
     pendingReviews,
     hiddenComments,
+    topMedia,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.media.count(),
     prisma.review.count(),
     prisma.reviewComment.count(),
+    prisma.review.groupBy({
+      by: ["mediaId"],
+      _count: { id: true },
+      _avg: { rating: true },
+      orderBy: { _count: { id: "desc" } },
+      take: 10,
+    }),
   ]);
+
+  // Fetch media titles for top reviewed
+  const mediaIds = topMedia.map((r) => r.mediaId);
+  const mediaList = await prisma.media.findMany({
+    where: { id: { in: mediaIds } },
+    select: { id: true, title: true },
+  });
+  const mediaMap = Object.fromEntries(mediaList.map((m) => [m.id, m.title]));
+
+  const mostReviewed = topMedia.map((r) => ({
+    mediaId: r.mediaId,
+    title: mediaMap[r.mediaId] || "Unknown",
+    totalReviews: r._count.id,
+    avgRating: Number((r._avg.rating ?? 0).toFixed(1)),
+  }));
 
   return {
     totalUsers,
     totalMedia,
     pendingReviews,
     hiddenComments,
+    mostReviewed,
   };
 }
 
