@@ -8,7 +8,7 @@ jspm_packages/
 *.env
 !.env.example
 
-# Editor auto-run tasks/settings (prevent folderOpen task injection)
+# Editor auto-run tasks/settings
 .vscode/
 
 # Build outputs
