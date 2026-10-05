@@ -10,7 +10,7 @@ export interface TMDBSearchResult {
   title: string;
   original_title?: string;
   name?: string;
-  media_type?: "movie" | "tv";
+  media_type?: "movie" | "tv" | "person";
   overview: string;
   poster_path: string | null;
   backdrop_path: string | null;
@@ -30,13 +30,16 @@ export async function searchTMDB(query: string, type: "movie" | "tv" | "multi" =
   }
 
   const data = (await response.json()) as { results: TMDBSearchResult[] };
+  const filtered = (data.results || []).filter((item) => item.media_type !== "person");
 
-  return data.results.map((item) => {
-    const itemType = item.media_type || (type === "tv" ? "tv" : "movie");
+  return filtered.map((item) => {
+    const itemType = item.media_type === "tv" ? "tv" : type === "tv" ? "tv" : "movie";
     const title = item.title || item.name || "Untitled";
     const releaseDate = item.release_date || item.first_air_date || "";
     const year = releaseDate ? new Date(releaseDate).getFullYear() : new Date().getFullYear();
-    const poster = item.poster_path ? `${TMDB_IMAGE_BASE}/w500${item.poster_path}` : "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&auto=format&fit=crop&q=60";
+    const poster = item.poster_path
+      ? `${TMDB_IMAGE_BASE}/w500${item.poster_path}`
+      : "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&auto=format&fit=crop&q=60";
 
     return {
       tmdbId: item.id,
@@ -46,16 +49,25 @@ export async function searchTMDB(query: string, type: "movie" | "tv" | "multi" =
       releaseYear: year,
       poster,
       rating: item.vote_average ? Number(item.vote_average.toFixed(1)) : 0,
-      embedUrl: itemType === "tv"
-        ? `https://vidsrc.to/embed/tv/${item.id}/1/1`
-        : `https://vidsrc.to/embed/movie/${item.id}`,
+      embedUrl:
+        itemType === "tv"
+          ? `https://vidsrc.to/embed/tv/${item.id}/1/1`
+          : `https://vidsrc.to/embed/movie/${item.id}`,
     };
   });
 }
 
-export async function getTMDBDetails(tmdbId: number | string, type: "movie" | "tv" = "movie") {
-  const endpoint = `${TMDB_BASE_URL}/${type}/${tmdbId}?api_key=${TMDB_API_KEY}&append_to_response=credits`;
-  const response = await fetch(endpoint);
+export async function getTMDBDetails(tmdbId: number | string, rawType: "movie" | "tv" | "multi" = "movie") {
+  let type: "movie" | "tv" = rawType === "tv" ? "tv" : "movie";
+  let endpoint = `${TMDB_BASE_URL}/${type}/${tmdbId}?api_key=${TMDB_API_KEY}&append_to_response=credits`;
+  let response = await fetch(endpoint);
+
+  // If initial attempt with "movie" failed (404), try "tv"
+  if (!response.ok && (rawType === "multi" || rawType === "movie")) {
+    type = "tv";
+    endpoint = `${TMDB_BASE_URL}/${type}/${tmdbId}?api_key=${TMDB_API_KEY}&append_to_response=credits`;
+    response = await fetch(endpoint);
+  }
 
   if (!response.ok) {
     throw new AppError("Failed to fetch media details from TMDB", 502, "TMDB_FETCH_ERROR");
@@ -101,9 +113,10 @@ export async function getTMDBDetails(tmdbId: number | string, type: "movie" | "t
     ? `${TMDB_IMAGE_BASE}/w500${data.poster_path}`
     : "https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&auto=format&fit=crop&q=60";
 
-  const streamingUrl = type === "tv"
-    ? `https://vidsrc.to/embed/tv/${tmdbId}/1/1`
-    : `https://vidsrc.to/embed/movie/${tmdbId}`;
+  const streamingUrl =
+    type === "tv"
+      ? `https://vidsrc.to/embed/tv/${tmdbId}/1/1`
+      : `https://vidsrc.to/embed/movie/${tmdbId}`;
 
   return {
     title,
@@ -119,16 +132,13 @@ export async function getTMDBDetails(tmdbId: number | string, type: "movie" | "t
   };
 }
 
-export async function importTMDBToMedia(tmdbId: number | string, type: "movie" | "tv" = "movie") {
+export async function importTMDBToMedia(tmdbId: number | string, type: "movie" | "tv" | "multi" = "movie") {
   const payload = await getTMDBDetails(tmdbId, type);
 
   // Check if media with exact title or streamingUrl already exists
   const existing = await prisma.media.findFirst({
     where: {
-      OR: [
-        { streamingUrl: payload.streamingUrl },
-        { title: payload.title },
-      ],
+      OR: [{ streamingUrl: payload.streamingUrl }, { title: payload.title }],
     },
   });
 
@@ -157,7 +167,7 @@ export async function autoSyncTrendingFromTMDB(limit = 12) {
   }
 
   const data = (await response.json()) as { results: TMDBSearchResult[] };
-  const items = data.results.slice(0, limit);
+  const items = (data.results || []).filter((item) => item.media_type !== "person").slice(0, limit);
 
   let importedCount = 0;
   const results = [];
@@ -179,4 +189,3 @@ export async function autoSyncTrendingFromTMDB(limit = 12) {
     message: `Auto-sync complete! ${importedCount} new trending titles imported into your library.`,
   };
 }
-
