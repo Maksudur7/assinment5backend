@@ -1,7 +1,14 @@
 import { AppError } from "../utils/errors";
 import prisma from "../lib/prisma";
 
-const TMDB_API_KEY = process.env.TMDB_API_KEY || "4e44d9029b1270a757cddc766a1bcb63";
+function getApiKey(): string {
+  const envKey = process.env.TMDB_API_KEY;
+  if (!envKey || envKey === "15d2fb67176b4e0322f3614a06509f9f" || envKey.trim().length < 10) {
+    return "4e44d9029b1270a757cddc766a1bcb63";
+  }
+  return envKey.trim();
+}
+
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
 
@@ -22,10 +29,13 @@ export interface TMDBSearchResult {
 export async function searchTMDB(query: string, type: "movie" | "tv" | "multi" = "multi") {
   if (!query || !query.trim()) return [];
 
-  const endpoint = `${TMDB_BASE_URL}/search/${type}?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query.trim())}`;
+  const apiKey = getApiKey();
+  const endpoint = `${TMDB_BASE_URL}/search/${type}?api_key=${apiKey}&query=${encodeURIComponent(query.trim())}`;
   const response = await fetch(endpoint);
 
   if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    console.error("[TMDB Search Error]:", response.status, errorText);
     throw new AppError("Failed to fetch search results from TMDB", 502, "TMDB_FETCH_ERROR");
   }
 
@@ -58,18 +68,21 @@ export async function searchTMDB(query: string, type: "movie" | "tv" | "multi" =
 }
 
 export async function getTMDBDetails(tmdbId: number | string, rawType: "movie" | "tv" | "multi" = "movie") {
+  const apiKey = getApiKey();
   let type: "movie" | "tv" = rawType === "tv" ? "tv" : "movie";
-  let endpoint = `${TMDB_BASE_URL}/${type}/${tmdbId}?api_key=${TMDB_API_KEY}&append_to_response=credits`;
+  let endpoint = `${TMDB_BASE_URL}/${type}/${tmdbId}?api_key=${apiKey}&append_to_response=credits`;
   let response = await fetch(endpoint);
 
   // If initial attempt with "movie" failed (404), try "tv"
   if (!response.ok && (rawType === "multi" || rawType === "movie")) {
     type = "tv";
-    endpoint = `${TMDB_BASE_URL}/${type}/${tmdbId}?api_key=${TMDB_API_KEY}&append_to_response=credits`;
+    endpoint = `${TMDB_BASE_URL}/${type}/${tmdbId}?api_key=${apiKey}&append_to_response=credits`;
     response = await fetch(endpoint);
   }
 
   if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    console.error("[TMDB Details Error]:", response.status, errorText);
     throw new AppError("Failed to fetch media details from TMDB", 502, "TMDB_FETCH_ERROR");
   }
 
@@ -159,7 +172,8 @@ export async function importTMDBToMedia(tmdbId: number | string, type: "movie" |
 }
 
 export async function autoSyncTrendingFromTMDB(limit = 12) {
-  const endpoint = `${TMDB_BASE_URL}/trending/all/day?api_key=${TMDB_API_KEY}`;
+  const apiKey = getApiKey();
+  const endpoint = `${TMDB_BASE_URL}/trending/all/day?api_key=${apiKey}`;
   const response = await fetch(endpoint);
 
   if (!response.ok) {
