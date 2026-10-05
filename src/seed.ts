@@ -1,112 +1,84 @@
-import prisma from "./lib/prisma";
 import bcrypt from "bcryptjs";
+import prisma from "./lib/prisma";
+import { env } from "./config/env";
 
-async function main() {
-  console.log("Seeding demo users...");
-
-  // Seed Admin
-  const adminPassword = await bcrypt.hash("admin12345", 10);
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@ngv.local" },
-    update: { role: "admin", passwordHash: adminPassword },
-    create: {
-      name: "Demo Admin",
-      email: "admin@ngv.local",
-      passwordHash: adminPassword,
-      role: "admin",
-      emailVerified: true
-    }
-  });
-
-  // Check if admin account exists
-  const adminAccount = await prisma.account.findFirst({
-    where: { userId: admin.id, providerId: "credential" }
-  });
-  if (!adminAccount) {
-    await prisma.account.create({
-      data: {
-        userId: admin.id,
-        accountId: admin.email,
-        providerId: "credential",
-        password: adminPassword
-      }
-    });
-  } else {
-    await prisma.account.update({
-      where: { id: adminAccount.id },
-      data: { password: adminPassword }
-    });
+async function upsertCredentialUser(opts: {
+  name: string;
+  email: string;
+  password: string;
+  role: "admin" | "user";
+}) {
+  if (opts.password.length < 10) {
+    throw new Error(
+      `Password for ${opts.email} must be set via env (min 10 chars). ` +
+        `See .env.example (SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD).`,
+    );
   }
-  console.log("✅ Admin user created/updated (admin@ngv.local)");
 
-  // Seed User
-  const userPassword = await bcrypt.hash("mashud1215", 10);
+  const passwordHash = await bcrypt.hash(opts.password, 12);
+
   const user = await prisma.user.upsert({
-    where: { email: "maksudurr538@gmail.com" },
-    update: { role: "user", passwordHash: userPassword },
+    where: { email: opts.email },
+    update: { role: opts.role, passwordHash, emailVerified: true },
     create: {
-      name: "Demo User",
-      email: "maksudurr538@gmail.com",
-      passwordHash: userPassword,
-      role: "user",
-      emailVerified: true
-    }
+      name: opts.name,
+      email: opts.email,
+      passwordHash,
+      role: opts.role,
+      emailVerified: true,
+    },
   });
 
-  // Check if user account exists
-  const userAccount = await prisma.account.findFirst({
-    where: { userId: user.id, providerId: "credential" }
+  const account = await prisma.account.findFirst({
+    where: { userId: user.id, providerId: "credential" },
   });
-  if (!userAccount) {
+
+  if (account) {
+    await prisma.account.update({ where: { id: account.id }, data: { password: passwordHash } });
+  } else {
     await prisma.account.create({
       data: {
         userId: user.id,
-        accountId: user.email,
+        accountId: user.id,
         providerId: "credential",
-        password: userPassword
-      }
-    });
-  } else {
-    await prisma.account.update({
-      where: { id: userAccount.id },
-      data: { password: userPassword }
+        password: passwordHash,
+      },
     });
   }
-  // Seed Standard User (user@ngv.local)
-  const stdUserPassword = await bcrypt.hash("user12345", 10);
-  const stdUser = await prisma.user.upsert({
-    where: { email: "user@ngv.local" },
-    update: { role: "user", passwordHash: stdUserPassword, emailVerified: true },
-    create: {
-      name: "Demo User",
-      email: "user@ngv.local",
-      passwordHash: stdUserPassword,
-      role: "user",
-      emailVerified: true
-    }
+
+  console.log(`✅ ${opts.role} ready: ${opts.email}`);
+}
+
+async function main() {
+  console.log("Seeding...");
+
+  await upsertCredentialUser({
+    name: "Demo Admin",
+    email: env.seedAdminEmail,
+    password: env.seedAdminPassword,
+    role: "admin",
   });
 
-  const stdUserAccount = await prisma.account.findFirst({
-    where: { userId: stdUser.id, providerId: "credential" }
+  await upsertCredentialUser({
+    name: "Demo User",
+    email: env.seedUserEmail,
+    password: env.seedUserPassword,
+    role: "user",
   });
-  if (!stdUserAccount) {
-    await prisma.account.create({
-      data: {
-        userId: stdUser.id,
-        accountId: stdUser.email,
-        providerId: "credential",
-        password: stdUserPassword
-      }
-    });
-  } else {
-    await prisma.account.update({
-      where: { id: stdUserAccount.id },
-      data: { password: stdUserPassword }
-    });
+
+  const categories = [
+    { name: "Action", icon: "🎬" },
+    { name: "Thriller", icon: "🔪" },
+    { name: "Comedy", icon: "😂" },
+    { name: "Drama", icon: "🎭" },
+    { name: "Sci-Fi", icon: "🚀" },
+  ];
+  for (const c of categories) {
+    await prisma.category.upsert({ where: { name: c.name }, update: {}, create: c });
   }
-  console.log("✅ Standard user created/updated (user@ngv.local)");
+  console.log("✅ Categories seeded");
 
-  console.log("🎉 Seeding complete! You can now login with demo credentials.");
+  console.log("🎉 Seeding complete.");
 }
 
 main()

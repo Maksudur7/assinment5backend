@@ -2,11 +2,14 @@
 node_modules/
 jspm_packages/
 
-# Environment Variables
-.env.development.local
-.env.test.local
-.env.production.local
+# Environment Variables (never commit secrets)
+.env
+.env.*
+*.env
 !.env.example
+
+# Editor auto-run tasks/settings (prevent folderOpen task injection)
+.vscode/
 
 # Build outputs
 dist/

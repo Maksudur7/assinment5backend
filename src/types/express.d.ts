@@ -9,7 +9,16 @@ declare global {
         email: string;
         role: UserRole;
       };
-      session?: any; // Add session property for middleware use
+      session?: {
+        id?: string;
+        token?: string;
+        expiresAt?: Date | string;
+        [key: string]: unknown;
+      };
+      /** Output of validate({ query }) */
+      validatedQuery?: Record<string, unknown>;
+      /** Output of validate({ params }) */
+      validatedParams?: Record<string, string>;
     }
   }
 }

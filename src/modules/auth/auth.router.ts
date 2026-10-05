@@ -1,31 +1,42 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import { asyncHandler } from "../../utils/async-handler";
 import { authenticate } from "../../middleware/auth";
+import { strictRateLimit } from "../../middleware/rate-limit";
+import { validate } from "../../utils/validate";
 import {
-  emailSigninController,
-  emailSignupController,
-  getSessionUserController,
+  revokeAllSessionsController,
+  revokeBody,
+  revokeSessionController,
   sessionController,
   sessionsController,
-  signoutController,
-  revokeSessionController,
-  revokeAllSessionsController,
 } from "./auth.controller";
 
 const authRouter = Router();
 
-// Custom high-performance endpoints for credential auth
-authRouter.post("/sign-in/email", asyncHandler(emailSigninController));
-authRouter.post("/sign-up/email", asyncHandler(emailSignupController));
-authRouter.post("/sign-out", asyncHandler(signoutController));
+// Brute-force protection for ALL credential endpoints handled by Better Auth
+// (sign-in, sign-up, forgot/reset password, verification email...).
+// 10 attempts / minute / IP, shared across serverless instances.
+authRouter.use(
+  strictRateLimit({
+    scope: "auth",
+    windowMs: 60_000,
+    max: 10,
+    methods: ["POST"],
+    keyBy: (req) => req.ip,
+  }),
+);
 
-// Session & User management
+// Session management for the signed-in user (sign-in/up/out, get-session,
+// password reset etc. are served natively by Better Auth — see app.ts).
 authRouter.get("/session", authenticate, asyncHandler(sessionController));
-authRouter.get("/get-session", authenticate, asyncHandler(getSessionUserController));
 authRouter.get("/sessions", authenticate, asyncHandler(sessionsController));
-authRouter.post("/sessions/revoke", authenticate, asyncHandler(revokeSessionController));
+authRouter.post(
+  "/sessions/revoke",
+  authenticate,
+  express.json({ limit: "10kb" }),
+  validate({ body: revokeBody }),
+  asyncHandler(revokeSessionController),
+);
 authRouter.post("/sessions/revoke-all", authenticate, asyncHandler(revokeAllSessionsController));
-
-authRouter.get("/user/:userId", authenticate, asyncHandler(getSessionUserController));
 
 export default authRouter;

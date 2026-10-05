@@ -1,19 +1,15 @@
+import { Prisma } from "@prisma/client";
 import prisma from "../../lib/prisma";
 import { AppError } from "../../utils/errors";
 
-export async function listReviews(mediaId: string, limit: number, offset: number, includePending: boolean) {
-  const media = await prisma.media.findUnique({ where: { id: mediaId } });
-  if (!media) throw new AppError("Media not found", 404, "MEDIA_NOT_FOUND");
+type Viewer = { id: string; role: string } | undefined;
 
-  const reviews = await prisma.review.findMany({
-    where: { mediaId, ...(includePending ? {} : { isPublished: true }) },
-    include: { user: { select: { id: true, name: true } }, likes: true },
-    orderBy: { createdAt: "desc" },
-    skip: offset,
-    take: limit,
-  });
+type ReviewWithRelations = Prisma.ReviewGetPayload<{
+  include: { user: { select: { id: true; name: true } }; likes: { select: { userId: true } } };
+}>;
 
-  return reviews.map((item) => ({
+function toDto(item: ReviewWithRelations, viewerId?: string) {
+  return {
     id: item.id,
     mediaId: item.mediaId,
     userId: item.userId,
@@ -24,107 +20,129 @@ export async function listReviews(mediaId: string, limit: number, offset: number
     spoiler: item.spoiler,
     isPublished: item.isPublished,
     likes: item.likes.length,
+    likedByMe: viewerId ? item.likes.some((l) => l.userId === viewerId) : false,
     createdAt: item.createdAt,
-  }));
-}
-
-export async function createReview(mediaId: string, userId: string, payload: { rating: number; content: string; tags?: string[]; spoiler?: boolean }) {
-  if (payload.rating < 1 || payload.rating > 10) {
-    throw new AppError("rating must be between 1 and 10", 422, "VALIDATION_ERROR");
-  }
-
-  const media = await prisma.media.findUnique({ where: { id: mediaId } });
-  if (!media) throw new AppError("Media not found", 404, "MEDIA_NOT_FOUND");
-
-  const review = await prisma.review.create({
-    data: {
-      mediaId,
-      userId,
-      rating: payload.rating,
-      content: payload.content,
-      tags: payload.tags || [],
-      spoiler: payload.spoiler || false,
-      isPublished: true,
-      moderationStatus: "APPROVED",
-    },
-    include: { user: { select: { name: true } }, likes: true },
-  });
-
-  return {
-    id: review.id,
-    mediaId: review.mediaId,
-    userId: review.userId,
-    userName: review.user.name,
-    rating: review.rating,
-    content: review.content,
-    tags: review.tags,
-    spoiler: review.spoiler,
-    isPublished: review.isPublished,
-    likes: review.likes.length,
-    createdAt: review.createdAt,
   };
 }
 
-export async function updateReview(reviewId: string, userId: string, payload: { rating?: number; content?: string; tags?: string[]; spoiler?: boolean }) {
+const reviewInclude = {
+  user: { select: { id: true, name: true } },
+  likes: { select: { userId: true } },
+} satisfies Prisma.ReviewInclude;
+
+/**
+ * Public: only published reviews. Signed-in users additionally see their OWN
+ * unpublished review. Only admins may list everything (includePending).
+ */
+export async function listReviews(
+  mediaId: string,
+  limit: number,
+  offset: number,
+  includePending: boolean,
+  viewer: Viewer,
+) {
+  const media = await prisma.media.findUnique({ where: { id: mediaId }, select: { id: true } });
+  if (!media) throw new AppError("Media not found", 404, "MEDIA_NOT_FOUND");
+
+  const isAdmin = viewer?.role === "admin";
+  const where: Prisma.ReviewWhereInput = {
+    mediaId,
+    ...(includePending && isAdmin
+      ? {}
+      : viewer
+        ? { OR: [{ isPublished: true }, { userId: viewer.id }] }
+        : { isPublished: true }),
+  };
+
+  const reviews = await prisma.review.findMany({
+    where,
+    include: reviewInclude,
+    orderBy: { createdAt: "desc" },
+    skip: offset,
+    take: limit,
+  });
+  return reviews.map((r) => toDto(r, viewer?.id));
+}
+
+export async function createReview(
+  mediaId: string,
+  userId: string,
+  payload: { rating: number; content: string; tags: string[]; spoiler: boolean },
+) {
+  const media = await prisma.media.findUnique({ where: { id: mediaId }, select: { id: true } });
+  if (!media) throw new AppError("Media not found", 404, "MEDIA_NOT_FOUND");
+
+  try {
+    const review = await prisma.review.create({
+      data: {
+        mediaId,
+        userId,
+        rating: payload.rating,
+        content: payload.content,
+        tags: payload.tags,
+        spoiler: payload.spoiler,
+        // Reviews are auto-published; admins can unpublish/delete afterwards.
+        isPublished: true,
+        moderationStatus: "APPROVED",
+      },
+      include: reviewInclude,
+    });
+    return toDto(review, userId);
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      throw new AppError("You have already reviewed this title. Edit your existing review instead.", 409, "REVIEW_EXISTS");
+    }
+    throw error;
+  }
+}
+
+export async function updateReview(
+  reviewId: string,
+  userId: string,
+  payload: { rating?: number; content?: string; tags?: string[]; spoiler?: boolean },
+) {
   const review = await prisma.review.findUnique({ where: { id: reviewId } });
   if (!review) throw new AppError("Review not found", 404, "REVIEW_NOT_FOUND");
   if (review.userId !== userId) throw new AppError("Forbidden", 403, "FORBIDDEN");
-  if (review.isPublished || review.moderationStatus !== "PENDING") {
-    throw new AppError("Only unpublished pending reviews can be edited", 400, "VALIDATION_ERROR");
-  }
-  if (payload.rating !== undefined && (payload.rating < 1 || payload.rating > 10)) {
-    throw new AppError("rating must be between 1 and 10", 422, "VALIDATION_ERROR");
+  if (review.moderationStatus === "REJECTED") {
+    throw new AppError("This review was removed by a moderator and can't be edited", 403, "REVIEW_REJECTED");
   }
 
   const updated = await prisma.review.update({
     where: { id: reviewId },
     data: {
       ...(payload.rating !== undefined ? { rating: payload.rating } : {}),
-      ...(payload.content ? { content: payload.content } : {}),
-      ...(payload.tags ? { tags: payload.tags } : {}),
-      ...(typeof payload.spoiler === "boolean" ? { spoiler: payload.spoiler } : {}),
+      ...(payload.content !== undefined ? { content: payload.content } : {}),
+      ...(payload.tags !== undefined ? { tags: payload.tags } : {}),
+      ...(payload.spoiler !== undefined ? { spoiler: payload.spoiler } : {}),
     },
-    include: { user: { select: { name: true } }, likes: true },
+    include: reviewInclude,
   });
-
-  return {
-    id: updated.id,
-    mediaId: updated.mediaId,
-    userId: updated.userId,
-    userName: updated.user.name,
-    rating: updated.rating,
-    content: updated.content,
-    tags: updated.tags,
-    spoiler: updated.spoiler,
-    isPublished: updated.isPublished,
-    likes: updated.likes.length,
-    createdAt: updated.createdAt,
-  };
+  return toDto(updated, userId);
 }
 
 export async function deleteReview(reviewId: string, userId: string) {
   const review = await prisma.review.findUnique({ where: { id: reviewId } });
   if (!review) throw new AppError("Review not found", 404, "REVIEW_NOT_FOUND");
   if (review.userId !== userId) throw new AppError("Forbidden", 403, "FORBIDDEN");
-  if (review.isPublished || review.moderationStatus !== "PENDING") {
-    throw new AppError("Only unpublished pending reviews can be deleted", 400, "VALIDATION_ERROR");
-  }
 
   await prisma.review.delete({ where: { id: reviewId } });
   return { success: true };
 }
 
 export async function toggleReviewLike(reviewId: string, userId: string) {
-  const review = await prisma.review.findUnique({ where: { id: reviewId } });
-  if (!review) throw new AppError("Review not found", 404, "REVIEW_NOT_FOUND");
+  const review = await prisma.review.findUnique({ where: { id: reviewId }, select: { id: true, isPublished: true } });
+  if (!review || !review.isPublished) throw new AppError("Review not found", 404, "REVIEW_NOT_FOUND");
 
-  const existing = await prisma.reviewLike.findUnique({ where: { reviewId_userId: { reviewId, userId } } });
+  const key = { reviewId_userId: { reviewId, userId } };
+  const existing = await prisma.reviewLike.findUnique({ where: key });
 
-  let isLiked = false;
+  let isLiked: boolean;
   if (existing) {
-    await prisma.reviewLike.delete({ where: { reviewId_userId: { reviewId, userId } } });
+    await prisma.reviewLike.deleteMany({ where: { reviewId, userId } });
+    isLiked = false;
   } else {
-    await prisma.reviewLike.create({ data: { reviewId, userId } });
+    await prisma.reviewLike.upsert({ where: key, create: { reviewId, userId }, update: {} });
     isLiked = true;
   }
 
@@ -132,9 +150,21 @@ export async function toggleReviewLike(reviewId: string, userId: string) {
   return { reviewId, likes, isLiked };
 }
 
-export async function addReviewComment(reviewId: string, userId: string, content: string, parentCommentId: string | null) {
-  const review = await prisma.review.findUnique({ where: { id: reviewId } });
-  if (!review) throw new AppError("Review not found", 404, "REVIEW_NOT_FOUND");
+export async function addReviewComment(
+  reviewId: string,
+  userId: string,
+  content: string,
+  parentCommentId: string | null,
+) {
+  const review = await prisma.review.findUnique({ where: { id: reviewId }, select: { id: true, isPublished: true } });
+  if (!review || !review.isPublished) throw new AppError("Review not found", 404, "REVIEW_NOT_FOUND");
+
+  if (parentCommentId) {
+    const parent = await prisma.reviewComment.findUnique({ where: { id: parentCommentId }, select: { reviewId: true } });
+    if (!parent || parent.reviewId !== reviewId) {
+      throw new AppError("Invalid parent comment", 422, "VALIDATION_ERROR");
+    }
+  }
 
   const comment = await prisma.reviewComment.create({
     data: { reviewId, userId, content, parentCommentId },
@@ -157,6 +187,7 @@ export async function listReviewComments(reviewId: string) {
     where: { reviewId },
     include: { user: { select: { name: true } } },
     orderBy: { createdAt: "asc" },
+    take: 500,
   });
 
   return comments.map((comment) => ({

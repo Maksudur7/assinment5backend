@@ -1,30 +1,41 @@
 import { Router } from "express";
+import { z } from "zod";
 import prisma from "../../lib/prisma";
+import { strictRateLimit } from "../../middleware/rate-limit";
+import { asyncHandler } from "../../utils/async-handler";
+import { validate } from "../../utils/validate";
 
-const router = Router();
+const contactRouter = Router();
 
-router.post("/", async (req, res) => {
-  try {
-    const { name, email, subject, message } = req.body;
-
-    if (!name || !email || !subject || !message) {
-      return res.status(400).json({ success: false, message: "All fields are required" });
-    }
-
-    const contactMessage = await prisma.contactMessage.create({
-      data: {
-        name,
-        email,
-        subject,
-        message,
-      },
-    });
-
-    res.status(201).json({ success: true, message: "Message sent successfully!", data: contactMessage });
-  } catch (error) {
-    console.error("Error saving contact message:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
+const contactBody = z.object({
+  name: z.string().trim().min(1).max(100),
+  email: z.string().trim().email().max(100),
+  subject: z.string().trim().min(1).max(200),
+  message: z.string().trim().min(1).max(3000),
 });
 
-export default router;
+// 5 messages / hour / IP
+const contactLimit = strictRateLimit({
+  scope: "contact",
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  methods: ["POST"],
+});
+
+contactRouter.post(
+  "/",
+  contactLimit,
+  validate({ body: contactBody }),
+  asyncHandler(async (req, res) => {
+    const contactMessage = await prisma.contactMessage.create({
+      data: req.body,
+    });
+    return res.status(201).json({
+      success: true,
+      message: "Message sent successfully!",
+      data: contactMessage,
+    });
+  }),
+);
+
+export default contactRouter;

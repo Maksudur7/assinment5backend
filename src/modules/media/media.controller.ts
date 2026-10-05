@@ -1,125 +1,114 @@
 import { Request, Response } from "express";
 import { AppError } from "../../utils/errors";
 import {
+  createMedia,
   getMediaById,
+  getViewStats,
+  leaveMedia,
   listFeatured,
   listMedia,
   listNewReleases,
   listRecommendations,
   listTrending,
+  recordHeartbeat,
   removeMedia,
-  updateMedia,
-  incrementView,
-  decrementViewer,
-  getViewStats,
+  sanitizeMedia,
   searchMedia,
-  createMedia,
+  updateMedia,
+  viewerKeyFor,
 } from "./media.service";
-import { generateWatchToken } from "../../lib/watch-token";
+import type { ListMediaQuery } from "./media.schema";
+import { searchTMDB, importTMDBToMedia, autoSyncTrendingFromTMDB } from "../../services/tmdb.service";
 
-// Optimized SSE Subscription Manager
-const subscriptions = new Map<string, Set<Response>>();
+/** Signed-in users may receive the playable URL; anonymous visitors never do. */
+const canSeeStream = (req: Request) => Boolean(req.user);
 
-setInterval(async () => {
-  for (const [mediaId, clients] of subscriptions.entries()) {
-    if (clients.size > 0) {
-       try {
-         const stats = await getViewStats(mediaId);
-         const payload = `data: ${JSON.stringify(stats)}\n\n`;
-         for (const res of clients) res.write(payload);
-       } catch (e) {
-         console.error("SSE Poll error", e);
-       }
-    }
-  }
-}, 5000);
-
-export async function streamViewerStatsController(req: Request, res: Response) {
-  res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    "Connection": "keep-alive",
-  });
-  
-  const mediaId = String(req.params.id);
-  
-  if (!subscriptions.has(mediaId)) subscriptions.set(mediaId, new Set());
-  subscriptions.get(mediaId)!.add(res);
-  
-  try {
-    const initialStats = await getViewStats(mediaId);
-    res.write(`data: ${JSON.stringify(initialStats)}\n\n`);
-  } catch(e) {}
-  
-  req.on("close", () => {
-    subscriptions.get(mediaId)?.delete(res);
-  });
-}
-export async function incrementViewController(req: Request, res: Response) {
-	const stats = await incrementView(String(req.params.id));
-	return res.status(200).json(stats);
-}
-
-export async function decrementViewerController(req: Request, res: Response) {
-	const stats = await decrementViewer(String(req.params.id));
-	return res.status(200).json(stats);
-}
-
-export async function getViewStatsController(req: Request, res: Response) {
-	const stats = await getViewStats(String(req.params.id));
-	return res.status(200).json(stats);
-}
+const sanitizeList = <T extends Record<string, any>>(items: T[], req: Request) =>
+  items.map((m) => sanitizeMedia(m, req.user?.role === "admin"));
 
 export async function listMediaController(req: Request, res: Response) {
-	return res.status(200).json(await listMedia(req.query as Record<string, unknown>));
+  const result = await listMedia(req.validatedQuery as ListMediaQuery);
+  return res.status(200).json({ ...result, items: sanitizeList(result.items, req) });
 }
 
 export async function getMediaController(req: Request, res: Response) {
-	return res.status(200).json(await getMediaById(String(req.params.id)));
+  const media = await getMediaById(req.params.id as string);
+  return res.status(200).json(sanitizeMedia(media, canSeeStream(req)));
 }
 
 export async function trendingController(req: Request, res: Response) {
-	const limit = Number.parseInt(String(req.query.limit || 6), 10);
-	return res.status(200).json(await listTrending(limit));
+  const { limit } = req.validatedQuery as { limit: number };
+  return res.status(200).json(sanitizeList(await listTrending(limit), req));
 }
 
-export async function featuredController(_req: Request, res: Response) {
-	return res.status(200).json(await listFeatured());
+export async function featuredController(req: Request, res: Response) {
+  return res.status(200).json(sanitizeList(await listFeatured(), req));
 }
 
 export async function newReleasesController(req: Request, res: Response) {
-	const limit = Number.parseInt(String(req.query.limit || 6), 10);
-	return res.status(200).json(await listNewReleases(limit));
+  const { limit } = req.validatedQuery as { limit: number };
+  return res.status(200).json(sanitizeList(await listNewReleases(limit), req));
 }
 
 export async function recommendationsController(req: Request, res: Response) {
-	if (!req.user) throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
-	return res.status(200).json(await listRecommendations(req.user.id));
-}
-
-export async function updateMediaController(req: Request, res: Response) {
-	return res.status(200).json(await updateMedia(String(req.params.id), req.body || {}));
+  if (!req.user) throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
+  return res.status(200).json(sanitizeList(await listRecommendations(req.user.id), req));
 }
 
 export async function searchMediaController(req: Request, res: Response) {
-  const q = String(req.query.q || "").trim();
+  const { q } = req.validatedQuery as { q: string };
   if (!q) return res.status(200).json([]);
-  return res.status(200).json(await searchMedia(q));
+  return res.status(200).json(sanitizeList(await searchMedia(q), req));
 }
 
-export async function watchTokenController(req: Request, res: Response) {
-  if (!req.user) throw new AppError("Unauthorized", 401, "UNAUTHORIZED");
-  const mediaId = String(req.params.id);
-  const media = await getMediaById(mediaId);
-  if (!media) throw new AppError("Not found", 404, "NOT_FOUND");
-  const token = generateWatchToken(req.user.id, mediaId);
-  return res.status(200).json({ token, expiresInSeconds: 15 * 60 });
+// ── Viewer presence ─────────────────────────────────────────────────────────
+export async function heartbeatController(req: Request, res: Response) {
+  const key = viewerKeyFor(req.user?.id, req.ip, req.headers["user-agent"]);
+  return res.status(200).json(await recordHeartbeat(req.params.id as string, key));
 }
 
+export async function leaveController(req: Request, res: Response) {
+  const key = viewerKeyFor(req.user?.id, req.ip, req.headers["user-agent"]);
+  return res.status(200).json(await leaveMedia(req.params.id as string, key));
+}
+
+export async function getViewStatsController(req: Request, res: Response) {
+  return res.status(200).json(await getViewStats(req.params.id as string));
+}
+
+// ── Admin ───────────────────────────────────────────────────────────────────
 export async function createMediaController(req: Request, res: Response) {
-  return res.status(201).json(await createMedia(req.body || {}));
+  return res.status(201).json(await createMedia(req.body));
+}
+
+export async function updateMediaController(req: Request, res: Response) {
+  return res.status(200).json(await updateMedia(req.params.id as string, req.body));
 }
 
 export async function deleteMediaController(req: Request, res: Response) {
-  return res.status(200).json(await removeMedia(String(req.params.id)));
+  return res.status(200).json(await removeMedia(req.params.id as string));
 }
+
+// ── TMDB Integration ────────────────────────────────────────────────────────
+export async function searchTMDBController(req: Request, res: Response) {
+  const query = (req.query.query as string) || "";
+  const type = (req.query.type as "movie" | "tv" | "multi") || "multi";
+  if (!query.trim()) return res.status(200).json([]);
+  const results = await searchTMDB(query, type);
+  return res.status(200).json(results);
+}
+
+export async function importTMDBController(req: Request, res: Response) {
+  const { tmdbId, type } = req.body;
+  if (!tmdbId) throw new AppError("TMDB ID is required", 400, "MISSING_TMDB_ID");
+  const result = await importTMDBToMedia(tmdbId, type || "movie");
+  return res.status(201).json(result);
+}
+
+export async function autoSyncTMDBController(req: Request, res: Response) {
+  const limit = req.body?.limit ? Number(req.body.limit) : 12;
+  const result = await autoSyncTrendingFromTMDB(limit);
+  return res.status(200).json(result);
+}
+
+

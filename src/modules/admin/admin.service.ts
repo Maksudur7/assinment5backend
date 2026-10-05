@@ -1,41 +1,33 @@
+import { Prisma, UserRole } from "@prisma/client";
 import prisma from "../../lib/prisma";
 import { AppError } from "../../utils/errors";
 import { addMediaMetrics } from "../../utils/media";
 
 export async function listPendingComments() {
-  try {
-    const comments = await prisma.reviewComment.findMany({
-      take: 50,
-      orderBy: { createdAt: "desc" },
-      include: { user: true, review: { include: { media: true } } },
-    });
-    return comments.map((item) => ({
-      id: item.id,
-      reviewId: item.reviewId,
-      userName: item.user?.name || "User",
-      content: item.content,
-      createdAt: item.createdAt,
-      reviewTitle: item.review?.media?.title || "Movie",
-    }));
-  } catch (e) {
-    return [];
-  }
+  const comments = await prisma.reviewComment.findMany({
+    take: 50,
+    orderBy: { createdAt: "desc" },
+    include: { user: true, review: { include: { media: true } } },
+  });
+  return comments.map((item) => ({
+    id: item.id,
+    reviewId: item.reviewId,
+    userName: item.user?.name || "User",
+    content: item.content,
+    createdAt: item.createdAt,
+    reviewTitle: item.review?.media?.title || "Movie",
+  }));
 }
 
 export async function getAdminOverview() {
-  const [
-    totalUsers,
-    totalMedia,
-    pendingReviews,
-    hiddenComments,
-    topMedia,
-  ] = await Promise.all([
+  const [totalUsers, totalMedia, pendingReviews, hiddenComments, topMedia] = await Promise.all([
     prisma.user.count(),
     prisma.media.count(),
-    prisma.review.count(),
+    prisma.review.count({ where: { isPublished: false } }),
     prisma.reviewComment.count(),
     prisma.review.groupBy({
       by: ["mediaId"],
+      where: { isPublished: true },
       _count: { id: true },
       _avg: { rating: true },
       orderBy: { _count: { id: "desc" } },
@@ -43,7 +35,6 @@ export async function getAdminOverview() {
     }),
   ]);
 
-  // Fetch media titles for top reviewed
   const mediaIds = topMedia.map((r) => r.mediaId);
   const mediaList = await prisma.media.findMany({
     where: { id: { in: mediaIds } },
@@ -69,6 +60,7 @@ export async function getAdminOverview() {
 
 export async function listPendingReviews() {
   const reviews = await prisma.review.findMany({
+    where: { isPublished: false },
     take: 50,
     orderBy: { createdAt: "desc" },
     include: { user: true, media: true },
@@ -104,26 +96,14 @@ export async function rejectReview(reviewId: string) {
   return { success: true, reviewId };
 }
 
-export async function createMedia(payload: any) {
-  const requiredFields = [
-    "title",
-    "synopsis",
-    "genres",
-    "releaseYear",
-    "director",
-    "cast",
-    "platforms",
-    "streamingUrl",
-    "poster",
-    "duration",
-  ];
+export async function removeReview(reviewId: string) {
+  const review = await prisma.review.findUnique({ where: { id: reviewId } });
+  if (!review) throw new AppError("Review not found", 404, "REVIEW_NOT_FOUND");
+  await prisma.review.delete({ where: { id: reviewId } });
+  return { success: true, reviewId };
+}
 
-  for (const field of requiredFields) {
-    if (payload?.[field] === undefined || payload?.[field] === null) {
-      throw new AppError(`${field} is required`, 422, "VALIDATION_ERROR");
-    }
-  }
-
+export async function createMedia(payload: Prisma.MediaCreateInput) {
   const created = await prisma.media.create({ data: payload });
   const [enriched] = await addMediaMetrics([created]);
   return enriched;
@@ -150,32 +130,22 @@ export async function removeComment(commentId: string) {
 }
 
 export async function createCategory(payload: { name: string; icon?: string }) {
-  if (!payload.name) {
-    throw new AppError("Category name is required", 422, "VALIDATION_ERROR");
-  }
   const existing = await prisma.category.findUnique({ where: { name: payload.name } });
-  if (existing) {
-    throw new AppError("Category already exists", 400, "CATEGORY_EXISTS");
-  }
+  if (existing) throw new AppError("Category already exists", 409, "CATEGORY_EXISTS");
   return prisma.category.create({
-    data: {
-      name: payload.name,
-      icon: payload.icon || "Film",
-    },
+    data: { name: payload.name, icon: payload.icon || "Film" },
   });
 }
 
 export async function deleteCategory(id: string) {
   const existing = await prisma.category.findUnique({ where: { id } });
-  if (!existing) {
-    throw new AppError("Category not found", 404, "NOT_FOUND");
-  }
+  if (!existing) throw new AppError("Category not found", 404, "NOT_FOUND");
   await prisma.category.delete({ where: { id } });
   return { success: true, message: "Category deleted" };
 }
 
 export async function listAllUsers() {
-  const users = await prisma.user.findMany({
+  return prisma.user.findMany({
     select: {
       id: true,
       name: true,
@@ -187,13 +157,9 @@ export async function listAllUsers() {
     },
     orderBy: { createdAt: "desc" },
   });
-  return users;
 }
 
-export async function updateUserRole(userId: string, role: string) {
-  if (role !== "user" && role !== "admin") {
-    throw new AppError("Invalid role", 400, "INVALID_ROLE");
-  }
+export async function updateUserRole(userId: string, role: UserRole) {
   const updated = await prisma.user.update({
     where: { id: userId },
     data: { role },
@@ -201,4 +167,3 @@ export async function updateUserRole(userId: string, role: string) {
   });
   return { success: true, user: updated };
 }
-

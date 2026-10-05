@@ -5,24 +5,19 @@ export function notFoundHandler(_req: Request, res: Response) {
   return res.status(404).json(errorPayload("Route not found", "NOT_FOUND"));
 }
 
-export function errorHandler(err: any, _req: Request, res: Response, _next: NextFunction) {
-  const statusCode = err.statusCode || err.status || 500;
-  const code = err.code || "INTERNAL_SERVER_ERROR";
-  const message = err.message || "Something went wrong";
+export function errorHandler(err: any, req: Request, res: Response, _next: NextFunction) {
+  const statusCode: number = Number(err?.statusCode || err?.status) || 500;
+  const isServerError = statusCode >= 500;
 
-  try {
-    const fs = require('fs');
-    const logData = {
-      time: new Date().toISOString(),
-      statusCode,
-      message,
-      code,
-      details: err.details || null,
-      stack: err.stack,
-      body: _req.body
-    };
-    fs.appendFileSync('C:/maksudur work/p classes/assinmentj2/project 1/error-log.txt', JSON.stringify(logData, null, 2) + '\n,\n');
-  } catch (e) {}
+  if (isServerError) {
+    // Log server-side only. Never log request bodies (they contain passwords/tokens).
+    console.error(`[${req.method} ${req.originalUrl}]`, err?.stack || err);
+  }
 
-  return res.status(statusCode).json(errorPayload(message, code, err.details));
+  // Never leak internals for 5xx.
+  const message = isServerError ? "Internal server error" : err?.message || "Request failed";
+  const code = isServerError ? "INTERNAL_SERVER_ERROR" : err?.code || "BAD_REQUEST";
+  const details = isServerError ? undefined : err?.details;
+
+  return res.status(statusCode).json(errorPayload(message, code, details));
 }

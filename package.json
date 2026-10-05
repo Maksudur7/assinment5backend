@@ -1,15 +1,18 @@
 {
   "name": "ngv-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "NGV streaming platform API (Express 5 + Prisma + Better Auth)",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "prisma generate && tsc -p tsconfig.json",
     "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
     "prisma:push": "prisma db push",
     "seed": "tsx src/seed.ts"
   },
@@ -20,15 +23,12 @@
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
-    "@types/nodemailer": "^8.0.1",
     "bcryptjs": "^3.0.3",
     "better-auth": "^1.6.2",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "helmet": "^8.0.0",
-    "jsonwebtoken": "^9.0.3",
-    "node-fetch": "^3.3.2",
     "nodemailer": "^9.0.3",
     "pg": "^8.20.0",
     "resend": "^6.17.2",
@@ -38,11 +38,11 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.9.5",
-    "nodemon": "^3.1.14",
+    "@types/nodemailer": "^8.0.1",
     "prisma": "^7.7.0",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "vitest": "^3.2.4"
   }
 }

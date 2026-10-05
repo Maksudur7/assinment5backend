@@ -1,57 +1,60 @@
 import dotenv from "dotenv";
 
-dotenv.config({ override: true });
+dotenv.config();
 
-const isProduction = process.env.NODE_ENV === "production";
+const isProduction = process.env.NODE_ENV === "production" || !!process.env.VERCEL;
 
-function requireEnv(key: string, fallback?: string): string {
-  const value = process.env[key] || fallback;
-  if (!value && isProduction) {
+/**
+ * Required in production (throws on boot if missing).
+ * In development a clearly-insecure placeholder is used so local setup is easy,
+ * but a real secret is NEVER committed to source control.
+ */
+function requireEnv(key: string, devFallback: string): string {
+  const value = process.env[key];
+  if (value) return value;
+  if (isProduction) {
     throw new Error(`[ENV] Missing required environment variable: ${key}`);
   }
-  return value || "";
+  return devFallback;
 }
 
-const isLocal = !process.env.VERCEL && (process.env.NODE_ENV !== "production" || process.env.PORT === "4000" || !process.env.PORT);
+function csv(value: string | undefined): string[] {
+  return (value || "")
+    .split(",")
+    .map((v) => v.trim().replace(/\/+$/, ""))
+    .filter(Boolean);
+}
 
-const rawFrontendUrl = isLocal
-  ? "http://localhost:3000"
-  : (process.env.FRONTEND_APP_URL ||
-     process.env.FRONTEND_APP_URLS ||
-     "https://ngv-black.vercel.app");
+const stripSlash = (v: string) => v.replace(/\/+$/, "");
 
-const parsedFrontendUrls = rawFrontendUrl
-  .split(",")
-  .map((v) => v.trim().replace(/\/+$/, ""))
-  .filter(Boolean);
+const frontendUrls = csv(process.env.FRONTEND_APP_URLS || process.env.FRONTEND_APP_URL);
+if (!isProduction && frontendUrls.length === 0) frontendUrls.push("http://localhost:3000");
+if (isProduction && frontendUrls.length === 0) {
+  throw new Error("[ENV] FRONTEND_APP_URL or FRONTEND_APP_URLS must be set in production");
+}
 
-const primaryFrontendUrl = parsedFrontendUrls[0] || (isLocal ? "http://localhost:3000" : "https://ngv-black.vercel.app");
+const appUrl = stripSlash(
+  process.env.APP_URL || (isProduction ? "" : "http://localhost:4000"),
+);
+if (isProduction && !appUrl) {
+  throw new Error("[ENV] Missing required environment variable: APP_URL");
+}
+
+const rawAuthUrl = stripSlash(process.env.BETTER_AUTH_URL || appUrl);
 
 export const env = {
+  isProduction,
   port: Number(process.env.PORT || 4000),
-  nodeEnv: process.env.NODE_ENV || "production",
+  nodeEnv: process.env.NODE_ENV || "development",
 
   // App URLs
-  appUrl: (process.env.APP_URL || (isLocal ? "http://localhost:4000" : "https://ngv-backend.vercel.app")).replace(/\/+$/, ""),
-  frontendAppUrl: process.env.FRONTEND_APP_URL || primaryFrontendUrl,
-  frontendAppUrls: Array.from(
-    new Set([
-      ...parsedFrontendUrls,
-      "https://ngv-black.vercel.app",
-      "http://localhost:3000",
-    ])
-  ),
+  appUrl,
+  frontendAppUrl: frontendUrls[0],
+  frontendAppUrls: frontendUrls,
 
   // Better Auth
-  betterAuthSecret: requireEnv("BETTER_AUTH_SECRET", "F2TUbwu1iD8UEYnpuP0SLScCwyyfF4e9"),
-  betterAuthUrl: (() => {
-    const rawUrl = (
-      process.env.BETTER_AUTH_URL ||
-      process.env.APP_URL ||
-      (isLocal ? "http://localhost:4000" : "https://ngv-backend.vercel.app")
-    ).replace(/\/+$/, "");
-    return rawUrl.endsWith("/api/auth") ? rawUrl : `${rawUrl}/api/auth`;
-  })(),
+  betterAuthSecret: requireEnv("BETTER_AUTH_SECRET", "dev-only-insecure-secret-change-me-32chars"),
+  betterAuthUrl: rawAuthUrl.endsWith("/api/auth") ? rawAuthUrl : `${rawAuthUrl}/api/auth`,
 
   // Email — Resend & SMTP (Nodemailer)
   resendApiKey: process.env.RESEND_API_KEY || "",
@@ -65,15 +68,15 @@ export const env = {
   // Social OAuth
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-  githubClientId: process.env.GITHUB_CLIENT_ID || "",
-  githubClientSecret: process.env.GITHUB_CLIENT_SECRET || "",
   facebookClientId: process.env.FACEBOOK_CLIENT_ID || "",
   facebookClientSecret: process.env.FACEBOOK_CLIENT_SECRET || "",
 
   // Watch token secret (for signed playback URLs)
-  watchTokenSecret: requireEnv(
-    "WATCH_TOKEN_SECRET",
-    "replace-with-strong-watch-token-secret-32chars",
-  ),
-};
+  watchTokenSecret: requireEnv("WATCH_TOKEN_SECRET", "dev-only-insecure-watch-token-secret-32chars"),
 
+  // Seed credentials (only used by `npm run seed`)
+  seedAdminEmail: process.env.SEED_ADMIN_EMAIL || "admin@ngv.local",
+  seedAdminPassword: process.env.SEED_ADMIN_PASSWORD || "",
+  seedUserEmail: process.env.SEED_USER_EMAIL || "user@ngv.local",
+  seedUserPassword: process.env.SEED_USER_PASSWORD || "",
+};

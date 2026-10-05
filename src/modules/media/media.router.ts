@@ -1,49 +1,62 @@
 import { Router } from "express";
-import { authenticate, requireAdmin } from "../../middleware/auth";
+import { authenticate, optionalAuthenticate, requireAdmin } from "../../middleware/auth";
+import { strictRateLimit } from "../../middleware/rate-limit";
 import { asyncHandler } from "../../utils/async-handler";
+import { idParam, mediaBody, mediaUpdateBody, validate } from "../../utils/validate";
+import { limitQuery, listMediaQuery, searchQuery } from "./media.schema";
 import {
   createMediaController,
   deleteMediaController,
   featuredController,
   getMediaController,
+  getViewStatsController,
+  heartbeatController,
+  leaveController,
   listMediaController,
   newReleasesController,
   recommendationsController,
+  searchMediaController,
   trendingController,
   updateMediaController,
-  incrementViewController,
-  decrementViewerController,
-  getViewStatsController,
-  streamViewerStatsController,
-  searchMediaController,
-  watchTokenController,
+  searchTMDBController,
+  importTMDBController,
+  autoSyncTMDBController,
 } from "./media.controller";
 
 const mediaRouter = Router();
 
-// ── Public endpoints ─────────────────────────────────────────────────────────
-mediaRouter.get("/", asyncHandler(listMediaController));
-mediaRouter.get("/search", asyncHandler(searchMediaController));
-mediaRouter.get("/trending", asyncHandler(trendingController));
-mediaRouter.get("/featured", asyncHandler(featuredController));
-mediaRouter.get("/new-releases", asyncHandler(newReleasesController));
+// ── Public listings (streamingUrl is stripped unless signed-in) ─────────────
+mediaRouter.get("/", optionalAuthenticate, validate({ query: listMediaQuery }), asyncHandler(listMediaController));
+mediaRouter.get("/search", optionalAuthenticate, validate({ query: searchQuery }), asyncHandler(searchMediaController));
+mediaRouter.get("/trending", optionalAuthenticate, validate({ query: limitQuery }), asyncHandler(trendingController));
+mediaRouter.get("/featured", optionalAuthenticate, asyncHandler(featuredController));
+mediaRouter.get("/new-releases", optionalAuthenticate, validate({ query: limitQuery }), asyncHandler(newReleasesController));
 mediaRouter.get("/recommendations", authenticate, asyncHandler(recommendationsController));
 
-// ── Viewer tracking (public — sendBeacon needs no auth) ───────────────────
-mediaRouter.post("/:id/increment-view", asyncHandler(incrementViewController));
-mediaRouter.post("/:id/decrement-viewer", asyncHandler(decrementViewerController));
-mediaRouter.get("/:id/view-stats", asyncHandler(getViewStatsController));
-mediaRouter.get("/:id/viewers/stream", streamViewerStatsController);
+// ── TMDB Import & Auto-Sync (Admin Only) ────────────────────────────────────
+mediaRouter.get("/tmdb/search", authenticate, requireAdmin, asyncHandler(searchTMDBController));
+mediaRouter.post("/tmdb/import", authenticate, requireAdmin, asyncHandler(importTMDBController));
+mediaRouter.post("/tmdb/auto-sync", authenticate, requireAdmin, asyncHandler(autoSyncTMDBController));
 
-// ── Watch token (requires auth) ───────────────────────────────────────────
-mediaRouter.get("/:id/watch-token", authenticate, asyncHandler(watchTokenController));
+// ── Viewer presence (heartbeat) ─────────────────────────────────────────────
+const presenceLimit = strictRateLimit({
+  scope: "presence",
+  windowMs: 60_000,
+  max: 30,
+  keyBy: (req) => `${req.ip}:${req.params.id}`,
+});
+mediaRouter.post("/:id/heartbeat", optionalAuthenticate, presenceLimit, validate({ params: idParam }), asyncHandler(heartbeatController));
+// Backwards-compatible aliases for older clients / sendBeacon
+mediaRouter.post("/:id/increment-view", optionalAuthenticate, presenceLimit, validate({ params: idParam }), asyncHandler(heartbeatController));
+mediaRouter.post("/:id/decrement-viewer", optionalAuthenticate, presenceLimit, validate({ params: idParam }), asyncHandler(leaveController));
+mediaRouter.get("/:id/view-stats", validate({ params: idParam }), asyncHandler(getViewStatsController));
 
-// ── Single media ───────────────────────────────────────────────────────────
-mediaRouter.get("/:id", asyncHandler(getMediaController));
+// ── Single media ────────────────────────────────────────────────────────────
+mediaRouter.get("/:id", optionalAuthenticate, validate({ params: idParam }), asyncHandler(getMediaController));
 
-// ── Admin only ─────────────────────────────────────────────────────────────
-mediaRouter.post("/", authenticate, requireAdmin, asyncHandler(createMediaController));
-mediaRouter.put("/:id", authenticate, requireAdmin, asyncHandler(updateMediaController));
-mediaRouter.delete("/:id", authenticate, requireAdmin, asyncHandler(deleteMediaController));
+// ── Admin only ──────────────────────────────────────────────────────────────
+mediaRouter.post("/", authenticate, requireAdmin, validate({ body: mediaBody }), asyncHandler(createMediaController));
+mediaRouter.put("/:id", authenticate, requireAdmin, validate({ params: idParam, body: mediaUpdateBody }), asyncHandler(updateMediaController));
+mediaRouter.delete("/:id", authenticate, requireAdmin, validate({ params: idParam }), asyncHandler(deleteMediaController));
 
 export default mediaRouter;

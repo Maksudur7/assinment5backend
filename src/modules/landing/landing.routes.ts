@@ -1,95 +1,110 @@
 import { Router } from "express";
+import { z } from "zod";
 import prisma from "../../lib/prisma";
+import { authenticate, requireAdmin } from "../../middleware/auth";
+import { asyncHandler } from "../../utils/async-handler";
 import { AppError } from "../../utils/errors";
+import { idParam, validate } from "../../utils/validate";
 
-const router = Router();
+const landingRouter = Router();
+
+const highlightBody = z.object({
+  title: z.string().trim().min(1).max(200),
+  text: z.string().trim().min(1).max(1000),
+});
+
+const testimonialBody = z.object({
+  name: z.string().trim().min(1).max(100),
+  quote: z.string().trim().min(1).max(1000),
+});
+
+const faqBody = z.object({
+  question: z.string().trim().min(1).max(300),
+  answer: z.string().trim().min(1).max(2000),
+});
 
 // Public: Get all landing content
-router.get("/", async (req, res, next) => {
-  try {
+landingRouter.get(
+  "/",
+  asyncHandler(async (_req, res) => {
     const [highlights, testimonials, faqs] = await Promise.all([
       prisma.landingHighlight.findMany({ orderBy: { createdAt: "asc" } }),
       prisma.landingTestimonial.findMany({ orderBy: { createdAt: "asc" } }),
       prisma.landingFaq.findMany({ orderBy: { createdAt: "asc" } }),
     ]);
 
-    res.json({
+    return res.status(200).json({
       success: true,
-      data: {
-        highlights,
-        testimonials,
-        faqs,
-      },
+      data: { highlights, testimonials, faqs },
     });
-  } catch (error) {
-    next(error);
-  }
-});
+  }),
+);
 
-// Admin: Create Highlight
-router.post("/highlights", async (req, res, next) => {
-  try {
-    const { title, text } = req.body;
-    if (!title || !text) throw new AppError("Missing fields", 400);
-    const highlight = await prisma.landingHighlight.create({ data: { title, text } });
-    res.status(201).json({ success: true, data: highlight });
-  } catch (error) {
-    next(error);
-  }
-});
+// Admin only routes
+landingRouter.post(
+  "/highlights",
+  authenticate,
+  requireAdmin,
+  validate({ body: highlightBody }),
+  asyncHandler(async (req, res) => {
+    const highlight = await prisma.landingHighlight.create({ data: req.body });
+    return res.status(201).json({ success: true, data: highlight });
+  }),
+);
 
-// Admin: Delete Highlight
-router.delete("/highlights/:id", async (req, res, next) => {
-  try {
-    await prisma.landingHighlight.delete({ where: { id: req.params.id } });
-    res.json({ success: true });
-  } catch (error) {
-    next(error);
-  }
-});
+landingRouter.delete(
+  "/highlights/:id",
+  authenticate,
+  requireAdmin,
+  validate({ params: idParam }),
+  asyncHandler(async (req, res) => {
+    await prisma.landingHighlight.delete({ where: { id: req.validatedParams!.id } });
+    return res.status(200).json({ success: true });
+  }),
+);
 
-// Admin: Create Testimonial
-router.post("/testimonials", async (req, res, next) => {
-  try {
-    const { name, quote } = req.body;
-    if (!name || !quote) throw new AppError("Missing fields", 400);
-    const testimonial = await prisma.landingTestimonial.create({ data: { name, quote } });
-    res.status(201).json({ success: true, data: testimonial });
-  } catch (error) {
-    next(error);
-  }
-});
+landingRouter.post(
+  "/testimonials",
+  authenticate,
+  requireAdmin,
+  validate({ body: testimonialBody }),
+  asyncHandler(async (req, res) => {
+    const testimonial = await prisma.landingTestimonial.create({ data: req.body });
+    return res.status(201).json({ success: true, data: testimonial });
+  }),
+);
 
-// Admin: Delete Testimonial
-router.delete("/testimonials/:id", async (req, res, next) => {
-  try {
-    await prisma.landingTestimonial.delete({ where: { id: req.params.id } });
-    res.json({ success: true });
-  } catch (error) {
-    next(error);
-  }
-});
+landingRouter.delete(
+  "/testimonials/:id",
+  authenticate,
+  requireAdmin,
+  validate({ params: idParam }),
+  asyncHandler(async (req, res) => {
+    await prisma.landingTestimonial.delete({ where: { id: req.validatedParams!.id } });
+    return res.status(200).json({ success: true });
+  }),
+);
 
-// Admin: Create FAQ
-router.post("/faqs", async (req, res, next) => {
-  try {
-    const { question, answer } = req.body;
-    if (!question || !answer) throw new AppError("Missing fields", 400);
-    const faq = await prisma.landingFaq.create({ data: { question, answer } });
-    res.status(201).json({ success: true, data: faq });
-  } catch (error) {
-    next(error);
-  }
-});
+landingRouter.post(
+  "/faqs",
+  authenticate,
+  requireAdmin,
+  validate({ body: faqBody }),
+  asyncHandler(async (req, res) => {
+    const faq = await prisma.landingFaq.create({ data: req.body });
+    return res.status(201).json({ success: true, data: faq });
+  }),
+);
 
-// Admin: Delete FAQ
-router.delete("/faqs/:id", async (req, res, next) => {
-  try {
-    await prisma.landingFaq.delete({ where: { id: req.params.id } });
-    res.json({ success: true });
-  } catch (error) {
-    next(error);
-  }
-});
+landingRouter.delete(
+  "/faqs/:id",
+  authenticate,
+  requireAdmin,
+  validate({ params: idParam }),
+  asyncHandler(async (req, res) => {
+    await prisma.landingFaq.delete({ where: { id: req.validatedParams!.id } });
+    return res.status(200).json({ success: true });
+  }),
+);
 
-export default router;
+export default landingRouter;

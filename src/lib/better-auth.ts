@@ -1,18 +1,23 @@
+import bcrypt from "bcryptjs";
 import prisma from "./prisma";
 import { env } from "../config/env";
+import { nativeImport } from "./native-import";
 import {
   sendEmail,
   verificationEmailTemplate,
   passwordResetEmailTemplate,
+  welcomeEmailTemplate,
 } from "./email";
 
 let authInstance: Promise<any> | null = null;
 
-async function nativeImport<T>(specifier: string): Promise<T> {
-  const importer = new Function("specifier", "return import(specifier);") as (
-    specifier: string,
-  ) => Promise<T>;
-  return importer(specifier);
+function extractToken(token: string | undefined, url: string): string {
+  if (token) return token;
+  try {
+    return new URL(url).searchParams.get("token") || "";
+  } catch {
+    return "";
+  }
 }
 
 export async function getAuth() {
@@ -20,59 +25,48 @@ export async function getAuth() {
     authInstance = (async () => {
       try {
         const { betterAuth } = await nativeImport<any>("better-auth");
-        const { prismaAdapter } = await nativeImport<any>(
-          "better-auth/adapters/prisma",
-        );
+        const { prismaAdapter } = await nativeImport<any>("better-auth/adapters/prisma");
+        const { hashPassword, verifyPassword } = await nativeImport<any>("better-auth/crypto");
+        const { bearer } = await nativeImport<any>("better-auth/plugins");
 
         const socialProviders: Record<string, any> = {};
-
-        // Only enable Google & Facebook social providers
         if (env.googleClientId && env.googleClientSecret) {
           socialProviders.google = {
             clientId: env.googleClientId,
             clientSecret: env.googleClientSecret,
-            disableStateCheck: true,
           };
         }
         if (env.facebookClientId && env.facebookClientSecret) {
           socialProviders.facebook = {
             clientId: env.facebookClientId,
             clientSecret: env.facebookClientSecret,
-            disableStateCheck: true,
           };
         }
+
+        const trustedOrigins = Array.from(
+          new Set([env.appUrl, ...env.frontendAppUrls].filter(Boolean)),
+        ) as string[];
+
         return betterAuth({
           secret: env.betterAuthSecret,
-          baseURL: env.betterAuthUrl, // Auth endpoint URL (e.g., http://localhost:4000/api/auth)
-          trustedOrigins: [
-            "http://localhost:3000",
-            "http://localhost:4000",
-            "https://ngv-black.vercel.app",
-            "https://ngv-backend.vercel.app",
-            env.appUrl,
-            env.frontendAppUrl,
-            ...(Array.isArray(env.frontendAppUrls) ? env.frontendAppUrls : []),
-          ].filter(Boolean) as string[],
-          database: prismaAdapter(prisma, {
-            provider: "postgresql",
-          }),
+          baseURL: env.betterAuthUrl,
+          trustedOrigins,
+          database: prismaAdapter(prisma, { provider: "postgresql" }),
+          plugins: [bearer()],
           advanced: {
             defaultCookieAttributes: {
-              sameSite: process.env.NODE_ENV === "production" || !!process.env.VERCEL ? "none" : "lax",
-              secure: process.env.NODE_ENV === "production" || !!process.env.VERCEL,
+              sameSite: env.isProduction ? "none" : "lax",
+              secure: env.isProduction,
+              httpOnly: true,
             },
           },
           user: {
             additionalFields: {
-              role: {
-                type: "string",
-                defaultValue: "user",
-                input: false,
-              },
+              role: { type: "string", defaultValue: "user", input: false },
             },
           },
           account: {
-            skipStateCookieCheck: true,
+            // OAuth state/cookie checks stay ENABLED (login-CSRF protection).
             storeStateStrategy: "cookie",
             accountLinking: {
               enabled: true,
@@ -80,10 +74,20 @@ export async function getAuth() {
             },
           },
 
-          // Email + Password auth
           emailAndPassword: {
             enabled: true,
+            minPasswordLength: 8,
+            maxPasswordLength: 128,
             requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION === "true",
+            // New passwords use Better Auth's scrypt. Legacy bcrypt hashes
+            // (created by older versions / seed script) are still accepted.
+            password: {
+              hash: (password: string) => hashPassword(password),
+              verify: async ({ hash, password }: { hash: string; password: string }) => {
+                if (hash.startsWith("$2")) return bcrypt.compare(password, hash);
+                return verifyPassword({ hash, password });
+              },
+            },
             sendResetPassword: async ({
               user,
               url,
@@ -93,27 +97,15 @@ export async function getAuth() {
               url: string;
               token?: string;
             }) => {
-              const resetToken =
-                token ||
-                (url.includes("token=")
-                  ? new URL(url).searchParams.get("token") || ""
-                  : "");
-
+              const resetToken = extractToken(token, url);
               const resetUrl = resetToken
                 ? `${env.frontendAppUrl}/reset-password?token=${encodeURIComponent(resetToken)}`
                 : url;
-
-              console.info(`[RESET LINK] ${user.email} -> ${resetUrl}`);
-
-              await sendEmail(
-                user.email,
-                "Reset your NGV password 🔑",
-                passwordResetEmailTemplate(resetUrl),
-              );
+              // NOTE: never log the link/token — it is a credential.
+              await sendEmail(user.email, "Reset your NGV password 🔑", passwordResetEmailTemplate(resetUrl));
             },
           },
 
-          // Email verification on signup
           emailVerification: {
             sendOnSignUp: true,
             autoSignInAfterVerification: true,
@@ -126,67 +118,33 @@ export async function getAuth() {
               url: string;
               token?: string;
             }) => {
-              // Construct direct frontend verification URL
-              const verificationToken =
-                token ||
-                (url.includes("token=")
-                  ? new URL(url).searchParams.get("token") || ""
-                  : "");
-
+              const verificationToken = extractToken(token, url);
               const verificationUrl = verificationToken
                 ? `${env.frontendAppUrl}/verify-email?token=${encodeURIComponent(verificationToken)}`
                 : url;
-
-              console.info(`[VERIFICATION LINK] ${user.email} -> ${verificationUrl}`);
-
-              await sendEmail(
-                user.email,
-                "Verify your NGV account 🎬",
-                verificationEmailTemplate(verificationUrl),
-              );
+              await sendEmail(user.email, "Verify your NGV account 🎬", verificationEmailTemplate(verificationUrl));
             },
           },
 
-          // Social OAuth providers (Google and Facebook only)
-          ...(Object.keys(socialProviders).length > 0
-            ? { socialProviders }
-            : {}),
+          ...(Object.keys(socialProviders).length > 0 ? { socialProviders } : {}),
 
-
-          // Session config
           session: {
-            expiresIn: 7 * 24 * 60 * 60, // 7 days in seconds
-            updateAge: 24 * 60 * 60, // refresh if 1 day old
-            cookieCache: {
-              enabled: true,
-              maxAge: 5 * 60, // 5 minute cache
-            },
+            expiresIn: 7 * 24 * 60 * 60,
+            updateAge: 24 * 60 * 60,
+            cookieCache: { enabled: true, maxAge: 5 * 60 },
           },
 
-          // Database hooks to sync legacy User fields with Better Auth schema
           databaseHooks: {
             user: {
               create: {
-                after: async (user: any) => {
-                  try {
-                    const account = await prisma.account.findFirst({
-                      where: { userId: user.id, providerId: "credential" },
-                    });
-                    if (account && account.password) {
-                      await prisma.user.update({
-                        where: { id: user.id },
-                        data: { passwordHash: account.password },
-                      });
-                    }
-                  } catch (err) {
-                    console.error("Error in user create after hook:", err);
-                  }
+                after: async (user: { name: string; email: string }) => {
+                  sendEmail(user.email, "Welcome to NGV 🎬", welcomeEmailTemplate(user.name)).catch(() => {});
                 },
               },
             },
             session: {
               create: {
-                after: async (session: any) => {
+                after: async (session: { userId: string }) => {
                   try {
                     await prisma.user.update({
                       where: { id: session.userId },
@@ -201,6 +159,7 @@ export async function getAuth() {
           },
         });
       } catch (e) {
+        authInstance = null; // allow retry on next request
         console.error("🔴 Better Auth Initialization Failed:", e);
         throw e;
       }
