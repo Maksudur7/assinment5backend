@@ -1,7 +1,7 @@
 import { AppError } from "../utils/errors";
 import prisma from "../lib/prisma";
 
-const TMDB_API_KEY = process.env.TMDB_API_KEY || "15d2fb67176b4e0322f3614a06509f9f";
+const TMDB_API_KEY = process.env.TMDB_API_KEY || "4e44d9029b1270a757cddc766a1bcb63";
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p";
 
