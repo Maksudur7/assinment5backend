@@ -33,7 +33,7 @@ export async function listMediaController(req: Request, res: Response) {
 
 export async function getMediaController(req: Request, res: Response) {
   const media = await getMediaById(req.params.id as string);
-  return res.status(200).json(sanitizeMedia(media, canSeeStream(req)));
+  return res.status(200).json(media);
 }
 
 export async function trendingController(req: Request, res: Response) {
