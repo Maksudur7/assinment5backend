@@ -11,7 +11,10 @@ export const listMediaQuery = z
     minPopularity: z.coerce.number().int().min(0).optional(),
     minRating: z.coerce.number().min(0).max(10).default(0),
     maxRating: z.coerce.number().min(0).max(10).default(10),
-    sort: z.enum(["latest", "popular", "rating", "year"]).default("latest"),
+    sort: z.preprocess(
+      (val) => (val === "highest-rated" ? "rating" : val === "most-reviewed" ? "popular" : val),
+      z.enum(["latest", "popular", "rating", "year"]).default("latest")
+    ),
   })
   .refine((q) => q.minRating <= q.maxRating, {
     message: "minRating must be <= maxRating",
