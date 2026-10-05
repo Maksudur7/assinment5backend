@@ -148,6 +148,28 @@ export async function getTMDBDetails(tmdbId: number | string, rawType: "movie" |
 export async function importTMDBToMedia(tmdbId: number | string, type: "movie" | "tv" | "multi" = "movie") {
   const payload = await getTMDBDetails(tmdbId, type);
 
+  // Auto-ensure categories exist in DB for imported genres
+  if (Array.isArray(payload.genres)) {
+    for (const rawGenre of payload.genres) {
+      let catName = rawGenre.trim();
+      if (catName.includes("Action")) catName = "Action";
+      else if (catName.includes("Sci") || catName.includes("Science")) catName = "Sci-Fi";
+      else if (catName.includes("Animation")) catName = "Animation";
+      else if (catName.includes("Comedy")) catName = "Comedy";
+      else if (catName.includes("Drama")) catName = "Drama";
+      else if (catName.includes("Horror")) catName = "Horror";
+      else if (catName.includes("Thriller")) catName = "Thriller";
+
+      if (catName) {
+        await prisma.category.upsert({
+          where: { name: catName },
+          update: {},
+          create: { name: catName, icon: "Film" },
+        }).catch(() => {});
+      }
+    }
+  }
+
   // Check if media with exact title or streamingUrl already exists
   const existing = await prisma.media.findFirst({
     where: {
