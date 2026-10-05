@@ -61,8 +61,8 @@ export async function searchTMDB(query: string, type: "movie" | "tv" | "multi" =
       rating: item.vote_average ? Number(item.vote_average.toFixed(1)) : 0,
       embedUrl:
         itemType === "tv"
-          ? `https://vidsrc.to/embed/tv/${item.id}/1/1`
-          : `https://vidsrc.to/embed/movie/${item.id}`,
+          ? `https://player.autoembed.cc/embed/tv/${item.id}/1/1`
+          : `https://player.autoembed.cc/embed/movie/${item.id}`,
     };
   });
 }
@@ -128,8 +128,8 @@ export async function getTMDBDetails(tmdbId: number | string, rawType: "movie" |
 
   const streamingUrl =
     type === "tv"
-      ? `https://vidsrc.to/embed/tv/${tmdbId}/1/1`
-      : `https://vidsrc.to/embed/movie/${tmdbId}`;
+      ? `https://player.autoembed.cc/embed/tv/${tmdbId}/1/1`
+      : `https://player.autoembed.cc/embed/movie/${tmdbId}`;
 
   return {
     title,
